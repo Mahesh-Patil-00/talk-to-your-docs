@@ -420,9 +420,9 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
     gr.Markdown(
     """
     ## Chat with your documents and websites<br>
-    Step 1) Enter your OpenAI API Key, and click Submit.
-    Step 2) Upload your documents and/or enter URLs, then click Load Data.
-    Step 3) Once data is loaded, click Initialize Chatbot (at the bottom of the page) to start talking to your data.
+    Step 1) Enter your OpenAI API Key, and click Submit.<br>
+    Step 2) Upload your documents and/or enter URLs, then click Load Data.<br>
+    Step 3) Once data is loaded, click Initialize Chatbot (at the bottom of the page) to start talking to your data.<br>
 
     Your documents should be semantically similar (covering related topics or having the similar meaning) in order to get the best results.
     You may also play around with Advanced Settings, like changing the model name and parameters.
