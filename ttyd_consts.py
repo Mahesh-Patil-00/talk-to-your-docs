@@ -2,9 +2,9 @@ exp_query = 'Generate top 5 questions that I can ask about this data. Questions 
 
 waitText_initialize = 'Preparing the documents, please wait...'
 
-initialize_prompt = 'Write a short welcome message to the user. Describe the documents with a brief overview including short summary or any highlights.\
-     If these documents are about a person, mention his name instead of using pronouns. After describing the overview, you should mention top 3 example questions that the user can ask about this data.\
-    Your response should be short and precise. Format of your response should be Description:\n{description} \n\n Example Questions:\n{examples}'
+initialize_prompt = 'Write a short welcome message to the user. Describe the documents with a comprehensive overview including short summary.\
+ If these documents are about a person, mention his name instead of using pronouns. After describing the overview, you should mention top 3 example questions that the user can ask about this data.\
+ \n\nYour response should be short and precise. Format of your response should be Summary:\n{Description and Summary} \n\n Example Questions:\n{Example Questions}'
 
 nustian_exps = ['Tell me about NUSTIAN',
                 'Who is the NUSTIAN regional lead for Silicon Valley?',
@@ -48,3 +48,43 @@ md_title_nustian = """
 
     You may also play around with Advanced Settings, like changing the model name and parameters.
     """
+
+md_title_arslan = """
+    ## Talk to Arslan<br>
+    Welcome to Arslan Ahmed's Chatbot!<br>
+    This is LLM-based question-answer application built using Retrieval Augmented Generation (RAG) approach with Langchain, implementing Generative AI technology.\
+    He has developed this application to help people get quick answers on frequently asked questions and topics, rather than waiting for his personal reply.\
+    Currently, this chatbot is trained on Arslan's resume and LinkedIn profile, with plans to incorporate additional data in the future.<br><br>
+    By default, this chatbot is powered by OpenAI's Large Language Model gpt-3.5-turbo. For those interested to explore, there are options under Advanced Settings to change the model and its parameters.
+    """
+
+
+welcomeMsgArslan = """Summary: The document provides a comprehensive overview of Arslan Ahmed\'s professional background and expertise as a data scientist.\
+ It highlights his experience in various industries and his proficiency in a wide range of data analysis tools and techniques.\
+ The document also mentions his involvement in research projects, publications, and academic achievements.\
+\n\nExample Questions:
+1. What are some of the key projects that Arslan has worked on as a data scientist?
+2. What tools and technologies did Arslan Ahmed utilize in his data science work at IBM?
+3. Tell me about Arslan's educational background.
+"""
+
+
+class TtydMode():
+    def __init__(self, name='', title='', ui='initialize', type='', dir=None, files=[], urls=[], vis=False, welMsg='', def_k=4):
+        self.name = name
+        self.title = title
+        self.loadUi = ui
+        self.type = type
+        self.inputDir=dir
+        self.file_list=files
+        self.url_list=urls
+        self.uiAddDataVis = vis
+        self.welcomeMsg = welMsg
+        self.k = def_k
+    
+
+
+
+mode_general = TtydMode(name='general', title=md_title_general, vis=True)
+mode_nustian = TtydMode(name='nustian', title=md_title_nustian, urls=['https://nustianusa.org', 'https://nustian.ca'])
+mode_arslan = TtydMode(name='arslan', ui='chatbot', title=md_title_arslan, dir='./documents/', welMsg=welcomeMsgArslan, def_k=8)

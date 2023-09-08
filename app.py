@@ -27,18 +27,13 @@ from ttyd_consts import *
 
 ###############################################################################################
 
-# You want to hardcode Documents or take it from UI?
-UiAddData = True
 
-if UiAddData: # take input data from UI
-    md_title = md_title_general
+# selct the mode from ttyd_consts.py
+mode = mode_general
 
-else: # provide paths to the data
-    url_list = ['https://www.nustianusa.org', 'https://www.nustian.ca']
+if mode.name!='general':
     # local vector store as opposed to gradio state vector store
-    vsDict_hard = localData_vecStore(os.getenv("OPENAI_API_KEY"), url_list=url_list)
-    md_title = md_title_nustian
-
+    vsDict_hard = localData_vecStore(os.getenv("OPENAI_API_KEY"), inputDir=mode.inputDir, file_list=mode.file_list, url_list=mode.url_list)
 
 ###############################################################################################
 
@@ -66,20 +61,23 @@ def initializeChatbot(temp, k, modelName, stdlQs, api_key_st, vsDict_st, progres
     qa_chain_st = updateQaChain(temp, k, modelName, stdlQs, api_key_st, vsDict_st)
     progress(0.5, waitText_initialize)
     #generate welcome message
-    result = qa_chain_st({'question': initialize_prompt, 'chat_history':[]})
+    if mode.welcomeMsg:
+        welMsg = mode.welcomeMsg
+    else:
+        welMsg = qa_chain_st({'question': initialize_prompt, 'chat_history':[]})['answer']
 
     # exSamples = generateExamples(api_key_st, vsDict_st)
     # exSamples_vis = True if exSamples[0] else False
 
     return qa_chain_st, btn.update(interactive=True), initChatbot_btn.update('Chatbot ready. Now visit the chatbot Tab.', interactive=False)\
-        , aKey_tb.update(), gr.Tabs.update(selected='cb'), chatbot.update(value=[('', result['answer'])])
+        , aKey_tb.update(), gr.Tabs.update(selected='cb'), chatbot.update(value=[('', welMsg)])
 
 
 def setApiKey(api_key):
     if api_key==os.getenv("TEMP_PWD") and os.getenv("OPENAI_API_KEY") is not None:
         api_key=os.getenv("OPENAI_API_KEY")
     try:
-        # api_key='Null' if api_key is None or api_key=='' else api_key
+        api_key='Null' if api_key is None or api_key=='' else api_key
         openai.Model.list(api_key=api_key) # test the API key
         api_key_st = api_key
 
@@ -108,7 +106,7 @@ def uiData_vecStore(userFiles, userUrls, api_key_st, vsDict_st={}, progress=gr.P
     docs = split_docs(documents)
     # Embeddings
     try:
-        # api_key_st='Null' if api_key_st is None or api_key_st=='' else api_key_st
+        api_key_st='Null' if api_key_st is None or api_key_st=='' else api_key_st
         openai.Model.list(api_key=api_key_st) # test the API key
         embeddings = OpenAIEmbeddings(openai_api_key=api_key_st)
     except Exception as e:
@@ -126,7 +124,7 @@ def uiData_vecStore(userFiles, userUrls, api_key_st, vsDict_st={}, progress=gr.P
 # just update the QA Chain, no updates to any UI
 def updateQaChain(temp, k, modelName, stdlQs, api_key_st, vsDict_st):
     # if we are not adding data from ui, then use vsDict_hard as vectorstore
-    if vsDict_st=={} and not UiAddData: vsDict_st=vsDict_hard
+    if vsDict_st=={} and mode.name!='general': vsDict_st=vsDict_hard
     modelName = modelName.split('(')[0].strip() # so we can provide any info in brackets
     # check if the input model is chat model or legacy model
     try:
@@ -183,7 +181,7 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
 
 
     # Setup the Gradio Layout
-    gr.Markdown(md_title)
+    gr.Markdown(mode.title)
     with gr.Tabs() as tabs:
         with gr.Tab('Initialization', id='init'):
             with gr.Row():
@@ -192,13 +190,13 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
                             , info='You can find OpenAI API key at https://platform.openai.com/account/api-keys'\
                             , placeholder='Enter your API key here and hit enter to begin chatting')
                     aKey_btn = gr.Button("Submit API Key")     
-            with gr.Row(visible=UiAddData):
+            with gr.Row(visible=mode.uiAddDataVis):
                 upload_fb = gr.Files(scale=5, label="Upload (multiple) Files - pdf/txt/docx supported", file_types=['.doc', '.docx', 'text', '.pdf', '.csv'])
                 urls_tb = gr.Textbox(scale=5, label="Enter URLs starting with https (comma separated)"\
                                     , info=url_tb_info\
                                     , placeholder=url_tb_ph)
                 data_ingest_btn = gr.Button("Load Data")
-            status_tb = gr.TextArea(label='Status bar', show_label=False, visible=UiAddData)
+            status_tb = gr.TextArea(label='Status bar', show_label=False, visible=mode.uiAddDataVis)
             initChatbot_btn = gr.Button("Initialize Chatbot", variant="primary")
 
         with gr.Tab('Chatbot', id='cb'):
@@ -215,7 +213,7 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
                 with gr.Row():
                     with gr.Column():
                         temp_sld = gr.Slider(minimum=0, maximum=1, step=0.1, value=0.7, label="Temperature", info='Sampling temperature to use when calling LLM. Defaults to 0.7')
-                        k_sld = gr.Slider(minimum=1, maximum=10, step=1, value=4, label="K", info='Number of relavant documents to return from Vector Store. Defaults to 4')
+                        k_sld = gr.Slider(minimum=1, maximum=10, step=1, value=mode.k, label="K", info='Number of relavant documents to return from Vector Store. Defaults to 4')
                         model_dd = gr.Dropdown(label='Model Name'\
                                 , choices=model_dd_choices\
                                 , value=model_dd_choices[0], allow_custom_value=True\
@@ -240,9 +238,12 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
     k_sld.release(**advSet_args)
     model_dd.change(**advSet_args)
     stdlQs_rb.change(**advSet_args)
-    
+
     # Initialize button
-    initChatbot_btn.click(initializeChatbot, [temp_sld, k_sld, model_dd, stdlQs_rb, api_key_state, chromaVS_state], [qa_state, btn, initChatbot_btn, aKey_tb, tabs, chatbot])
+    initCb_args = {'fn':initializeChatbot, 'inputs':[temp_sld, k_sld, model_dd, stdlQs_rb, api_key_state, chromaVS_state], 'outputs':[qa_state, btn, initChatbot_btn, aKey_tb, tabs, chatbot]}
+    if mode.loadUi=='chatbot':
+        demo.load(**initCb_args) # load Chatbot UI directly on startup
+    initChatbot_btn.click(**initCb_args)
 
     # Chatbot submit button
     chat_btn_args = {'fn':respond, 'inputs':[msg, chatbot,  qa_state], 'outputs':[msg, chatbot, srcDocs, btn]}
