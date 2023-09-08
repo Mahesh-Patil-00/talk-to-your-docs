@@ -28,7 +28,7 @@ from ttyd_consts import *
 ###############################################################################################
 
 # You want to hardcode Documents or take it from UI?
-UiAddData = False
+UiAddData = True
 
 if UiAddData: # take input data from UI
     md_title = md_title_general
