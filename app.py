@@ -28,7 +28,7 @@ from ttyd_consts import *
 ###############################################################################################
 
 
-# select the mode at runtime while starting container - modes options are in ttyd_consts.py
+# select the mode at runtime when starting container - modes options are in ttyd_consts.py
 if os.getenv("TTYD_MODE")=='arslan':
     mode = mode_arslan
 elif os.getenv("TTYD_MODE")=='nustian':
