@@ -28,8 +28,14 @@ from ttyd_consts import *
 ###############################################################################################
 
 
-# selct the mode from ttyd_consts.py
-mode = mode_general
+# select the mode at runtime while starting container - modes options are in ttyd_consts.py
+if os.getenv("TTYD_MODE")=='arslan':
+    mode = mode_arslan
+elif os.getenv("TTYD_MODE")=='nustian':
+    mode = mode_nustian
+else:
+    mode = mode_general
+
 
 if mode.type!='userInputDocs':
     # local vector store as opposed to gradio state vector store
