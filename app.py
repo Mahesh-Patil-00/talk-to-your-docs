@@ -31,7 +31,7 @@ from ttyd_consts import *
 # selct the mode from ttyd_consts.py
 mode = mode_general
 
-if mode.name!='general':
+if mode.type!='userInputDocs':
     # local vector store as opposed to gradio state vector store
     vsDict_hard = localData_vecStore(os.getenv("OPENAI_API_KEY"), inputDir=mode.inputDir, file_list=mode.file_list, url_list=mode.url_list)
 
@@ -74,13 +74,10 @@ def initializeChatbot(temp, k, modelName, stdlQs, api_key_st, vsDict_st, progres
 
 
 def setApiKey(api_key):
-    if api_key==os.getenv("TEMP_PWD") and os.getenv("OPENAI_API_KEY") is not None:
-        api_key=os.getenv("OPENAI_API_KEY")
+    api_key = transformApi(api_key)
     try:
-        api_key='Null' if api_key is None or api_key=='' else api_key
         openai.Model.list(api_key=api_key) # test the API key
         api_key_st = api_key
-
         return aKey_tb.update('API Key accepted', interactive=False, type='text'), aKey_btn.update(interactive=False), api_key_st
     except Exception as e:
         return aKey_tb.update(str(e), type='text'), *[x.update() for x in [aKey_btn, api_key_state]]
@@ -124,7 +121,7 @@ def uiData_vecStore(userFiles, userUrls, api_key_st, vsDict_st={}, progress=gr.P
 # just update the QA Chain, no updates to any UI
 def updateQaChain(temp, k, modelName, stdlQs, api_key_st, vsDict_st):
     # if we are not adding data from ui, then use vsDict_hard as vectorstore
-    if vsDict_st=={} and mode.name!='general': vsDict_st=vsDict_hard
+    if vsDict_st=={} and mode.type!='userInputDocs': vsDict_st=vsDict_hard
     modelName = modelName.split('(')[0].strip() # so we can provide any info in brackets
     # check if the input model is chat model or legacy model
     try:
@@ -176,7 +173,7 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
     # Initialize state variables - stored in this browser session - these can only be used within input or output of .click/.submit etc, not as a python var coz they are not stored in backend, only as a frontend gradio component
     # but if you initialize it with a default value, that value will be stored in backend and accessible across all users. You can also change it with statear.value='newValue'
     qa_state = gr.State()
-    api_key_state = gr.State()
+    api_key_state = gr.State(os.getenv("OPENAI_API_KEY") if mode.type=='personalBot' else 'Null')
     chromaVS_state = gr.State({})
 
 
@@ -189,7 +186,7 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
                     aKey_tb = gr.Textbox(label="OpenAI API Key", type='password'\
                             , info='You can find OpenAI API key at https://platform.openai.com/account/api-keys'\
                             , placeholder='Enter your API key here and hit enter to begin chatting')
-                    aKey_btn = gr.Button("Submit API Key")     
+                    aKey_btn = gr.Button("Submit API Key")
             with gr.Row(visible=mode.uiAddDataVis):
                 upload_fb = gr.Files(scale=5, label="Upload (multiple) Files - pdf/txt/docx supported", file_types=['.doc', '.docx', 'text', '.pdf', '.csv'])
                 urls_tb = gr.Textbox(scale=5, label="Enter URLs starting with https (comma separated)"\
@@ -230,7 +227,7 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
     aKey_tb.submit(**aKey_btn_args)
 
     # Data Ingest Button
-    data_ingest_btn.click(uiData_vecStore, [upload_fb, urls_tb, api_key_state, chromaVS_state], [chromaVS_state, status_tb, data_ingest_btn, upload_fb, urls_tb])
+    data_ingest_event = data_ingest_btn.click(uiData_vecStore, [upload_fb, urls_tb, api_key_state, chromaVS_state], [chromaVS_state, status_tb, data_ingest_btn, upload_fb, urls_tb])
 
     # Adv Settings
     advSet_args = {'fn':updateQaChain, 'inputs':[temp_sld, k_sld, model_dd, stdlQs_rb, api_key_state, chromaVS_state], 'outputs':[qa_state]}
@@ -241,7 +238,7 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
 
     # Initialize button
     initCb_args = {'fn':initializeChatbot, 'inputs':[temp_sld, k_sld, model_dd, stdlQs_rb, api_key_state, chromaVS_state], 'outputs':[qa_state, btn, initChatbot_btn, aKey_tb, tabs, chatbot]}
-    if mode.loadUi=='chatbot':
+    if mode.type=='personalBot':
         demo.load(**initCb_args) # load Chatbot UI directly on startup
     initChatbot_btn.click(**initCb_args)
 
@@ -250,5 +247,5 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
     btn.click(**chat_btn_args)
     msg.submit(**chat_btn_args)
 
-demo.queue()
+demo.queue(concurrency_count=10)
 demo.launch(show_error=True)

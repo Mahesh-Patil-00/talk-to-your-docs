@@ -2,8 +2,8 @@ exp_query = 'Generate top 5 questions that I can ask about this data. Questions 
 
 waitText_initialize = 'Preparing the documents, please wait...'
 
-initialize_prompt = 'Write a short welcome message to the user. Describe the documents with a comprehensive overview including short summary.\
- If these documents are about a person, mention his name instead of using pronouns. After describing the overview, you should mention top 3 example questions that the user can ask about this data.\
+initialize_prompt = 'Write a short welcome message to the user. Describe the data with a comprehensive overview including short summary.\
+ If this data is about a person, mention his name instead of using pronouns. After describing the overview, you should mention top 3 example questions that the user can ask about this data.\
  \n\nYour response should be short and precise. Format of your response should be Summary:\n{Description and Summary} \n\n Example Questions:\n{Example Questions}'
 
 nustian_exps = ['Tell me about NUSTIAN',
@@ -70,21 +70,19 @@ welcomeMsgArslan = """Summary: The document provides a comprehensive overview of
 
 
 class TtydMode():
-    def __init__(self, name='', title='', ui='initialize', type='', dir=None, files=[], urls=[], vis=False, welMsg='', def_k=4):
+    def __init__(self, name='', title='', type='', dir=None, files=[], urls=[], vis=False, welMsg='', def_k=4):
         self.name = name
-        self.title = title
-        self.loadUi = ui
-        self.type = type
+        self.title = title # markdown title for the top display
+        self.type = type # userInputDocs, fixedDocs, personalBot
         self.inputDir=dir
         self.file_list=files
         self.url_list=urls
-        self.uiAddDataVis = vis
-        self.welcomeMsg = welMsg
-        self.k = def_k
-    
+        self.uiAddDataVis = vis # load data from user - this will be true for type = userInputDocs
+        self.welcomeMsg = welMsg #welcome msg constant - if not provided LLM will generate it
+        self.k = def_k # default k docs to retrieve
 
 
 
-mode_general = TtydMode(name='general', title=md_title_general, vis=True)
-mode_nustian = TtydMode(name='nustian', title=md_title_nustian, urls=['https://nustianusa.org', 'https://nustian.ca'])
-mode_arslan = TtydMode(name='arslan', ui='chatbot', title=md_title_arslan, dir='./documents/', welMsg=welcomeMsgArslan, def_k=8)
+mode_general = TtydMode(name='general', title=md_title_general, type='userInputDocs', vis=True)
+mode_nustian = TtydMode(name='nustian', title=md_title_nustian, type='fixedDocs', urls=['https://nustian.ca'])
+mode_arslan = TtydMode(name='arslan', title=md_title_arslan, type='personalBot', dir='./documents/', welMsg=welcomeMsgArslan, def_k=8)

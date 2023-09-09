@@ -1,17 +1,11 @@
 
 import datetime
-import openai
 import uuid
-import gradio as gr
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import Chroma
-from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTextSplitter
-from langchain.chains import ConversationalRetrievalChain
-from langchain.chains import RetrievalQA
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 import os
-from langchain.chat_models import ChatOpenAI
-from langchain import OpenAI
 from langchain.document_loaders import WebBaseLoader, TextLoader, Docx2txtLoader, PyMuPDFLoader
 from whatsapp_chat_custom import WhatsAppChatLoader # use this instead of from langchain.document_loaders import WhatsAppChatLoader
 
@@ -30,6 +24,15 @@ HTTP_URL_PATTERN = r'^http[s]*://.+'
 mimetypes.init()
 media_files = tuple([x for x in mimetypes.types_map if mimetypes.types_map[x].split('/')[0] in ['image', 'video', 'audio']])
 filter_strings = ['/email-protection#']
+
+
+def transformApi(api_key=''):
+    if api_key==os.getenv("TEMP_PWD"):
+        return os.getenv("OPENAI_API_KEY")
+    elif api_key is None or api_key=='':
+        return 'Null'
+    else:
+        return api_key
 
 def get_hyperlinks(url):
     try:
@@ -58,7 +61,7 @@ def get_domain_hyperlinks(local_domain, url):
         if re.search(HTTP_URL_PATTERN, link):
             # Parse the URL and check if the domain is the same
             url_obj = urlparse(link)
-            if url_obj.netloc == local_domain:
+            if url_obj.netloc.replace('www.','') == local_domain.replace('www.',''):
                 clean_link = link
 
         # If the link is not a URL, check if it is a relative link
