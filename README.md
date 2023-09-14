@@ -24,4 +24,4 @@ https://huggingface.co/spaces/arslan-ahmed/talk-to-your-docs/tree/main
 Docker:
 docker pull arslan2k12/ttyd_base
 docker pull arslan2k12/arslanbot
-docker run --rm -d -p 7860:7860 -e TTYD_MODE=xxxx -e OPENAI_API_KEY=xxxx arslan2k12/arslanbot
+docker run --rm -d -p 7860:7860 --env-file ./.env arslan2k12/arslanbot
