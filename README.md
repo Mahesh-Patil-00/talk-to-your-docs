@@ -36,7 +36,7 @@ TTYD_MODE=personalBot_john
 #replace john with your name - use only small alphabets, no special characters
 
 GDRIVE_FOLDER_URL=https://drive.google.com/drive/folders/1ce1n1kleS1FOotdcu5joXeSRu_xnHjDt
-# replace with your Google Drive folder URL - make sure this folder is publically accessible (everyone with the link)
+# replace with your Google Drive folder URL that has all your knowledge base files (.pdf, .docs, .txt) - make sure this folder is publically accessible (everyone with the link)
 
 OPENAI_API_KEY=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
 # your OpenAI API Key.
