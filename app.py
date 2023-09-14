@@ -1,3 +1,4 @@
+import gdown
 import datetime
 import openai
 import uuid
@@ -29,8 +30,16 @@ from ttyd_consts import *
 
 
 # select the mode at runtime when starting container - modes options are in ttyd_consts.py
-if os.getenv("TTYD_MODE")=='arslan':
+
+if (os.getenv("TTYD_MODE")).split('_')[0]=='personalBot':
     mode = mode_arslan
+    gDriveUrl = os.getenv("GDRIVE_FOLDER_URL")
+    # output folder of googe drive folder will be taken as input dir of personalBot
+    gdown.download_folder(url=gDriveUrl, output=mode.inputDir, quiet=True)
+    if os.getenv("TTYD_MODE")!='personalBot_arslan':
+        mode.title=''
+        mode.welcomeMsg=''
+
 elif os.getenv("TTYD_MODE")=='nustian':
     mode = mode_nustian
 else:
@@ -71,7 +80,7 @@ def initializeChatbot(temp, k, modelName, stdlQs, api_key_st, vsDict_st, progres
         welMsg = mode.welcomeMsg
     else:
         welMsg = qa_chain_st({'question': initialize_prompt, 'chat_history':[]})['answer']
-
+    print('Chatbot initialized at ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     # exSamples = generateExamples(api_key_st, vsDict_st)
     # exSamples_vis = True if exSamples[0] else False
 
