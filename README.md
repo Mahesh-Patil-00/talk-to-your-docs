@@ -14,16 +14,16 @@ Check out the configuration reference at https://huggingface.co/docs/hub/spaces-
 
 # Talk To Your Docs
 
-### For users
+## For users
 You can use this app via Hugging Face where it is already deployed:<br/>
 https://huggingface.co/spaces/arslan-ahmed/talk-to-your-docs
 
 
-### For developers
+## For developers
 Source code:<br/>
 https://huggingface.co/spaces/arslan-ahmed/talk-to-your-docs/tree/main
 
-### Create your personal bot (let people talk to your docs)
+## Create your personal bot (let people talk to your docs)
 You can develop and deploy your own personal chatbot (similar to https://huggingface.co/spaces/arslan-ahmed/talk-to-arslan), with the following three commands:
 
 
