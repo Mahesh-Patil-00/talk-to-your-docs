@@ -12,6 +12,7 @@ license: apache-2.0
 
 Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference -->
 
+# Talk To Your Docs
 
 ### For users
 You can use this app via Hugging Face where it is already deployed:<br/>
@@ -22,6 +23,7 @@ https://huggingface.co/spaces/arslan-ahmed/talk-to-your-docs
 Source code:<br/>
 https://huggingface.co/spaces/arslan-ahmed/talk-to-your-docs/tree/main
 
+### Create your personal bot (let people talk to your docs)
 You can develop and deploy your own personal chatbot (similar to https://huggingface.co/spaces/arslan-ahmed/talk-to-arslan), with the following three commands:
 
 
