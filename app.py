@@ -1,4 +1,5 @@
 import gdown
+from dotenv import load_dotenv
 import datetime
 import openai
 import uuid
@@ -28,9 +29,9 @@ from ttyd_consts import *
 
 ###############################################################################################
 
+load_dotenv()
 
 # select the mode at runtime when starting container - modes options are in ttyd_consts.py
-
 if (os.getenv("TTYD_MODE")).split('_')[0]=='personalBot':
     mode = mode_arslan
     gDriveUrl = os.getenv("GDRIVE_FOLDER_URL")
