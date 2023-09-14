@@ -6,3 +6,4 @@ tiktoken
 pypdf
 gradio
 PyMuPDF
+gdown
