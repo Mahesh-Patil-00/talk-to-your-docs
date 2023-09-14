@@ -7,3 +7,4 @@ pypdf
 gradio
 PyMuPDF
 gdown
+docx2txt
