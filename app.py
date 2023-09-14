@@ -32,16 +32,16 @@ from ttyd_consts import *
 load_dotenv()
 
 # select the mode at runtime when starting container - modes options are in ttyd_consts.py
-if (os.getenv("TTYD_MODE")).split('_')[0]=='personalBot':
+if (os.getenv("TTYD_MODE",'')).split('_')[0]=='personalBot':
     mode = mode_arslan
-    gDriveUrl = os.getenv("GDRIVE_FOLDER_URL")
+    gDriveUrl = (os.getenv("GDRIVE_FOLDER_URL",'')).replace('?usp=sharing','')
     # output folder of googe drive folder will be taken as input dir of personalBot
     gdown.download_folder(url=gDriveUrl, output=mode.inputDir, quiet=True)
-    if os.getenv("TTYD_MODE")!='personalBot_arslan':
+    if os.getenv("TTYD_MODE",'')!='personalBot_arslan':
         mode.title=''
         mode.welcomeMsg=''
 
-elif os.getenv("TTYD_MODE")=='nustian':
+elif os.getenv("TTYD_MODE",'')=='nustian':
     mode = mode_nustian
 else:
     mode = mode_general
