@@ -68,8 +68,6 @@ def initializeChatbot(temp, k, modelName, stdlQs, api_key_st, vsDict_st, progres
     else:
         welMsg = qa_chain_st({'question': initialize_prompt, 'chat_history':[]})['answer']
     print('Chatbot initialized at ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-    # exSamples = generateExamples(api_key_st, vsDict_st)
-    # exSamples_vis = True if exSamples[0] else False
 
     return qa_chain_st, btn.update(interactive=True), initChatbot_btn.update('Chatbot ready. Now visit the chatbot Tab.', interactive=False)\
         , aKey_tb.update(), gr.Tabs.update(selected='cb'), chatbot.update(value=[('', welMsg)])
