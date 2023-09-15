@@ -57,20 +57,6 @@ if mode.type!='userInputDocs':
 
 ###############################################################################################
 
-def generateExamples(api_key_st, vsDict_st):
-    qa_chain = RetrievalQA.from_llm(llm=ChatOpenAI(openai_api_key=api_key_st, temperature=0), 
-                    retriever=vsDict_st['chromaClient'].as_retriever(search_type="similarity", search_kwargs={"k": 4}))
-
-    result = qa_chain({'query': exp_query})
-    answer = result['result'].strip('\n')
-    grSamples = [[]]
-    if answer.startswith('1. '):
-        lines = answer.split("\n")  # split the answers into individual lines
-        list_items = [line.split(". ")[1] for line in lines]  # extract each answer after the numbering
-        grSamples = [[x] for x in list_items] # gr takes list of each item as a list
-
-    return grSamples
-
 # initialize chatbot function sets the QA Chain, and also sets/updates any other components to start chatting. updateQaChain function only updates QA chain and will be called whenever Adv Settings are updated.
 def initializeChatbot(temp, k, modelName, stdlQs, api_key_st, vsDict_st, progress=gr.Progress()):
     progress(0.1, waitText_initialize)
