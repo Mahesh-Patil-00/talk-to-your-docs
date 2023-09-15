@@ -262,3 +262,15 @@ def num_tokens_from_string(string, encoding_name = "cl100k_base"):
     encoding = tiktoken.get_encoding(encoding_name)
     num_tokens = len(encoding.encode(string))
     return num_tokens
+
+def getPersonalBotApiKey():
+    print('funcCalled')
+    if os.getenv("OPENAI_API_KEY"):
+        return os.getenv("OPENAI_API_KEY")
+    elif os.getenv("WX_API_KEY"):
+        wxCreds = {'credentials' : {"url": "https://us-south.ml.cloud.ibm.com", "apikey": os.getenv("WX_API_KEY") },
+                    'project_id': os.getenv("WX_PROJECT_ID")
+                    }
+        return wxCreds
+    else:
+        return None

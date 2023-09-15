@@ -70,17 +70,17 @@ def initializeChatbot(temp, k, modelName, stdlQs, api_key_st, vsDict_st, progres
     print('Chatbot initialized at ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     return qa_chain_st, btn.update(interactive=True), initChatbot_btn.update('Chatbot ready. Now visit the chatbot Tab.', interactive=False)\
-        , aKey_tb.update(), gr.Tabs.update(selected='cb'), chatbot.update(value=[('', welMsg)])
+        , oaiKey_tb.update(), gr.Tabs.update(selected='cb'), chatbot.update(value=[('', welMsg)])
 
 
-def setApiKey(api_key):
+def setOaiApiKey(api_key):
     api_key = transformApi(api_key)
     try:
         openai.Model.list(api_key=api_key) # test the API key
         api_key_st = api_key
-        return aKey_tb.update('API Key accepted', interactive=False, type='text'), aKey_btn.update(interactive=False), api_key_st
+        return oaiKey_tb.update('API Key accepted', interactive=False, type='text'), oaiKey_btn.update(interactive=False), api_key_st
     except Exception as e:
-        return aKey_tb.update(str(e), type='text'), *[x.update() for x in [aKey_btn, api_key_state]]
+        return oaiKey_tb.update(str(e), type='text'), *[x.update() for x in [oaiKey_btn, api_key_state]]
     
 # convert user uploaded data to vectorstore
 def uiData_vecStore(userFiles, userUrls, api_key_st, vsDict_st={}, progress=gr.Progress()):
@@ -172,7 +172,7 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
     # Initialize state variables - stored in this browser session - these can only be used within input or output of .click/.submit etc, not as a python var coz they are not stored in backend, only as a frontend gradio component
     # but if you initialize it with a default value, that value will be stored in backend and accessible across all users. You can also change it with statear.value='newValue'
     qa_state = gr.State()
-    api_key_state = gr.State(os.getenv("OPENAI_API_KEY") if mode.type=='personalBot' else 'Null')
+    api_key_state = gr.State(getPersonalBotApiKey() if mode.type=='personalBot' else 'Null') # can be string (OpenAI) or dict (WX)
     chromaVS_state = gr.State({})
 
 
@@ -182,10 +182,10 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
         with gr.Tab('Initialization', id='init'):
             with gr.Row():
                 with gr.Column():
-                    aKey_tb = gr.Textbox(label="OpenAI API Key", type='password'\
+                    oaiKey_tb = gr.Textbox(label="OpenAI API Key", type='password'\
                             , info='You can find OpenAI API key at https://platform.openai.com/account/api-keys'\
                             , placeholder='Enter your API key here and hit enter to begin chatting')
-                    aKey_btn = gr.Button("Submit API Key")
+                    oaiKey_btn = gr.Button("Submit API Key")
             with gr.Row(visible=mode.uiAddDataVis):
                 upload_fb = gr.Files(scale=5, label="Upload (multiple) Files - pdf/txt/docx supported", file_types=['.doc', '.docx', 'text', '.pdf', '.csv'])
                 urls_tb = gr.Textbox(scale=5, label="Enter URLs starting with https (comma separated)"\
@@ -221,9 +221,9 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
     ### Setup the Gradio Event Listeners
 
     # API button
-    aKey_btn_args = {'fn':setApiKey, 'inputs':[aKey_tb], 'outputs':[aKey_tb, aKey_btn, api_key_state]}
-    aKey_btn.click(**aKey_btn_args)
-    aKey_tb.submit(**aKey_btn_args)
+    oaiKey_btn_args = {'fn':setOaiApiKey, 'inputs':[oaiKey_tb], 'outputs':[oaiKey_tb, oaiKey_btn, api_key_state]}
+    oaiKey_btn.click(**oaiKey_btn_args)
+    oaiKey_tb.submit(**oaiKey_btn_args)
 
     # Data Ingest Button
     data_ingest_event = data_ingest_btn.click(uiData_vecStore, [upload_fb, urls_tb, api_key_state, chromaVS_state], [chromaVS_state, status_tb, data_ingest_btn, upload_fb, urls_tb])
@@ -236,7 +236,7 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
     stdlQs_rb.change(**advSet_args)
 
     # Initialize button
-    initCb_args = {'fn':initializeChatbot, 'inputs':[temp_sld, k_sld, model_dd, stdlQs_rb, api_key_state, chromaVS_state], 'outputs':[qa_state, btn, initChatbot_btn, aKey_tb, tabs, chatbot]}
+    initCb_args = {'fn':initializeChatbot, 'inputs':[temp_sld, k_sld, model_dd, stdlQs_rb, api_key_state, chromaVS_state], 'outputs':[qa_state, btn, initChatbot_btn, oaiKey_tb, tabs, chatbot]}
     if mode.type=='personalBot':
         demo.load(**initCb_args) # load Chatbot UI directly on startup
     initChatbot_btn.click(**initCb_args)
