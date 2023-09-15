@@ -103,7 +103,6 @@ def uiData_vecStore(userFiles, userUrls, api_key_st, vsDict_st={}, progress=gr.P
     docs = split_docs(documents)
     # Embeddings
     try:
-        api_key_st='Null' if api_key_st is None or api_key_st=='' else api_key_st
         openai.Model.list(api_key=api_key_st) # test the API key
         embeddings = OpenAIEmbeddings(openai_api_key=api_key_st)
     except Exception as e:
