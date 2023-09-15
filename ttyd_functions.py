@@ -264,7 +264,6 @@ def num_tokens_from_string(string, encoding_name = "cl100k_base"):
     return num_tokens
 
 def getPersonalBotApiKey():
-    print('funcCalled')
     if os.getenv("OPENAI_API_KEY"):
         return os.getenv("OPENAI_API_KEY")
     elif os.getenv("WX_API_KEY"):
