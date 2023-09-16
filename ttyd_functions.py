@@ -1,9 +1,11 @@
 
 import datetime
 import uuid
+import openai
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.embeddings import SentenceTransformerEmbeddings
 
 import os
 from langchain.document_loaders import WebBaseLoader, TextLoader, Docx2txtLoader, PyMuPDFLoader
@@ -25,15 +27,31 @@ mimetypes.init()
 media_files = tuple([x for x in mimetypes.types_map if mimetypes.types_map[x].split('/')[0] in ['image', 'video', 'audio']])
 filter_strings = ['/email-protection#']
 
-
-def transformApi(api_key=''):
-    if api_key==os.getenv("TEMP_PWD"):
-        return os.getenv("OPENAI_API_KEY")
-    elif api_key is None or api_key=='':
-        return 'Null'
+def getOaiCreds(key):
+    if key:
+        return {'service': 'openai',
+                    'oai_key' : key
+                }
     else:
-        return api_key
+        return {} 
 
+def getWxCreds(key, p_id):
+    if key and p_id:
+        return {'service': 'watsonx',
+                'credentials' : {"url": "https://us-south.ml.cloud.ibm.com", "apikey": key },
+                'project_id': p_id
+                }
+    else:
+        return {}
+
+def getPersonalBotApiKey():
+    if os.getenv("OPENAI_API_KEY"):
+        return getOaiCreds(os.getenv("OPENAI_API_KEY"))
+    elif os.getenv("WX_API_KEY") and os.getenv("WX_PROJECT_ID"):
+        return getWxCreds(os.getenv("WX_API_KEY"), os.getenv("WX_PROJECT_ID"))
+    else:
+        return {}
+    
 def get_hyperlinks(url):
     try:
         reqs = requests.get(url)
@@ -226,6 +244,18 @@ def getSourcesFromMetadata(metadata, sourceOnly=True, sepFileUrl=True):
         src_docs = '\n'.join(([f"{i+1}) {x}" for i,x in enumerate(sorted(list(setSrc), key=str.casefold))]))
         return src_docs, len(setSrc)
     
+def getEmbeddingFunc(creds):
+    # OpenAI key used
+        if creds.get('service')=='openai':
+            embeddings = OpenAIEmbeddings(openai_api_key=creds.get('oai_key','Null'))
+        # WX key used
+        elif creds.get('service')=='watsonx':
+            # testModel = Model(model_id=ModelTypes.FLAN_UL2, credentials=creds['credentials'], project_id=creds['project_id']) # test the API key
+            # del testModel
+            embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2") # for now use OpenSource model for embedding as WX doesnt have any embedding model
+        else:
+            raise Exception('Error: Invalid or None Credentials')
+        return embeddings
 
 def getVsDict(embeddingFunc, docs, vsDict={}):
     # create chroma client if doesnt exist
@@ -241,13 +271,13 @@ def getVsDict(embeddingFunc, docs, vsDict={}):
     return vsDict
 
 # used for Hardcoded documents only - not uploaded by user (userData_vecStore is separate function)
-def localData_vecStore(openApiKey=None, inputDir=None, file_list=[], url_list=[], vsDict={}):
+def localData_vecStore(embKey={}, inputDir=None, file_list=[], url_list=[], vsDict={}):
     documents = data_ingestion(inputDir, file_list, url_list)
     if not documents:
-       return {}
+       raise Exception('Error: No Documents Found')
     docs = split_docs(documents)
     # Embeddings
-    embeddings = OpenAIEmbeddings(openai_api_key=openApiKey)
+    embeddings = getEmbeddingFunc(embKey)
     # create chroma client if doesnt exist
     vsDict_hd = getVsDict(embeddings, docs, vsDict)
     # get sources from metadata
@@ -263,13 +293,3 @@ def num_tokens_from_string(string, encoding_name = "cl100k_base"):
     num_tokens = len(encoding.encode(string))
     return num_tokens
 
-def getPersonalBotApiKey():
-    if os.getenv("OPENAI_API_KEY"):
-        return os.getenv("OPENAI_API_KEY")
-    elif os.getenv("WX_API_KEY"):
-        wxCreds = {'credentials' : {"url": "https://us-south.ml.cloud.ibm.com", "apikey": os.getenv("WX_API_KEY") },
-                    'project_id': os.getenv("WX_PROJECT_ID")
-                    }
-        return wxCreds
-    else:
-        return None

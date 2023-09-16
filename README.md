@@ -29,7 +29,7 @@ You can develop and deploy your own personal chatbot (similar to https://hugging
 
 docker pull arslan2k12/ttyd_base (https://hub.docker.com/r/arslan2k12/ttyd_base) <br/>
 docker pull arslan2k12/arslanbot (https://hub.docker.com/r/arslan2k12/arslanbot)<br/>
-docker run --rm -d -p 7860:7860 --env-file ./.env arslan2k12/arslanbot
+docker run --rm -d -p 7860:7860 --env-file ./.env arslan2k12/ttyd_arslanbot
 
 
 Contents of `.env` file:

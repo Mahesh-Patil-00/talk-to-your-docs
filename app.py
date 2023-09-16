@@ -9,12 +9,19 @@ from langchain.vectorstores import Chroma
 from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTextSplitter
 from langchain.chains import ConversationalRetrievalChain
 from langchain.chains import RetrievalQA
+from langchain.embeddings import SentenceTransformerEmbeddings
 
 import os
 from langchain.chat_models import ChatOpenAI
 from langchain import OpenAI
 from langchain.document_loaders import WebBaseLoader, TextLoader, Docx2txtLoader, PyMuPDFLoader
 from whatsapp_chat_custom import WhatsAppChatLoader # use this instead of from langchain.document_loaders import WhatsAppChatLoader
+
+from ibm_watson_machine_learning.foundation_models.utils.enums import ModelTypes
+from ibm_watson_machine_learning.metanames import GenTextParamsMetaNames as GenParams
+from ibm_watson_machine_learning.foundation_models.utils.enums import DecodingMethods
+from ibm_watson_machine_learning.foundation_models import Model
+from ibm_watson_machine_learning.foundation_models.extensions.langchain import WatsonxLLM
 
 from collections import deque
 import re
@@ -31,7 +38,7 @@ from ttyd_consts import *
 
 load_dotenv()
 
-# select the mode at runtime when starting container - modes options are in ttyd_consts.py
+# select the mode when starting container - modes options are in ttyd_consts.py
 if (os.getenv("TTYD_MODE",'')).split('_')[0]=='personalBot':
     mode = mode_arslan
     gDriveUrl = (os.getenv("GDRIVE_FOLDER_URL",'')).replace('?usp=sharing','')
@@ -48,8 +55,8 @@ else:
 
 
 if mode.type!='userInputDocs':
-    # local vector store as opposed to gradio state vector store
-    vsDict_hard = localData_vecStore(os.getenv("OPENAI_API_KEY"), inputDir=mode.inputDir, file_list=mode.file_list, url_list=mode.url_list)
+    # local vector store as opposed to gradio state vector store, if we the user is not uploading the docs
+    vsDict_hard = localData_vecStore(getPersonalBotApiKey(), inputDir=mode.inputDir, file_list=mode.file_list, url_list=mode.url_list)
 
 ###############################################################################################
 
@@ -57,30 +64,27 @@ if mode.type!='userInputDocs':
 
 ###############################################################################################
 
-# initialize chatbot function sets the QA Chain, and also sets/updates any other components to start chatting. updateQaChain function only updates QA chain and will be called whenever Adv Settings are updated.
-def initializeChatbot(temp, k, modelName, stdlQs, api_key_st, vsDict_st, progress=gr.Progress()):
-    progress(0.1, waitText_initialize)
-    qa_chain_st = updateQaChain(temp, k, modelName, stdlQs, api_key_st, vsDict_st)
-    progress(0.5, waitText_initialize)
-    #generate welcome message
-    if mode.welcomeMsg:
-        welMsg = mode.welcomeMsg
-    else:
-        welMsg = qa_chain_st({'question': initialize_prompt, 'chat_history':[]})['answer']
-    print('Chatbot initialized at ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-
-    return qa_chain_st, btn.update(interactive=True), initChatbot_btn.update('Chatbot ready. Now visit the chatbot Tab.', interactive=False)\
-        , oaiKey_tb.update(), gr.Tabs.update(selected='cb'), chatbot.update(value=[('', welMsg)])
-
-
 def setOaiApiKey(api_key):
-    api_key = transformApi(api_key)
+    credComps = [oaiKey_btn, wxKey_tb, wxPid_tb, wxKey_btn]
+    api_key = getOaiCreds(api_key)
     try:
-        openai.Model.list(api_key=api_key) # test the API key
+        openai.Model.list(api_key=api_key.get('oai_key','Null')) # test the API key
         api_key_st = api_key
-        return oaiKey_tb.update('API Key accepted', interactive=False, type='text'), oaiKey_btn.update(interactive=False), api_key_st
+        return oaiKey_tb.update('API Key accepted', interactive=False, type='text'), *[x.update(interactive=False) for x in credComps], api_key_st
     except Exception as e:
-        return oaiKey_tb.update(str(e), type='text'), *[x.update() for x in [oaiKey_btn, api_key_state]]
+        return oaiKey_tb.update(str(e), type='text'), *[x.update() for x in credComps+[api_key_state]]
+    
+
+def setWxApiKey(key, p_id):
+    credComps = [wxKey_btn, oaiKey_tb, oaiKey_btn]
+    api_key = getWxCreds(key, p_id)
+    try:
+        testModel = Model(model_id=ModelTypes.FLAN_UL2, credentials=api_key['credentials'], project_id=api_key['project_id']) # test the API key
+        del testModel
+        api_key_st = api_key
+        return *[x.update('Watsonx credentials accepted', interactive=False, type='text') for x in [wxKey_tb, wxPid_tb]], *[x.update(interactive=False) for x in credComps], api_key_st
+    except Exception as e:
+        return *[x.update(str(e), type='text') for x in [wxKey_tb, wxPid_tb]], *[x.update() for x in credComps+[api_key_state]]
     
 # convert user uploaded data to vectorstore
 def uiData_vecStore(userFiles, userUrls, api_key_st, vsDict_st={}, progress=gr.Progress()):
@@ -103,8 +107,7 @@ def uiData_vecStore(userFiles, userUrls, api_key_st, vsDict_st={}, progress=gr.P
     docs = split_docs(documents)
     # Embeddings
     try:
-        openai.Model.list(api_key=api_key_st) # test the API key
-        embeddings = OpenAIEmbeddings(openai_api_key=api_key_st)
+        embeddings = getEmbeddingFunc(api_key_st)
     except Exception as e:
         return {}, str(e), *[x.update() for x in opComponents]
     
@@ -117,18 +120,57 @@ def uiData_vecStore(userFiles, userUrls, api_key_st, vsDict_st={}, progress=gr.P
     progress(1, 'Data loaded')
     return vsDict_st, src_str, *[x.update(interactive=False) for x in [data_ingest_btn, upload_fb]], urls_tb.update(interactive=False, placeholder='')
 
+# initialize chatbot function sets the QA Chain, and also sets/updates any other components to start chatting. updateQaChain function only updates QA chain and will be called whenever Adv Settings are updated.
+def initializeChatbot(temp, k, modelName, stdlQs, api_key_st, vsDict_st, progress=gr.Progress()):
+    progress(0.1, waitText_initialize)
+    chainTuple = updateQaChain(temp, k, modelName, stdlQs, api_key_st, vsDict_st)
+    qa_chain_st = chainTuple[0]
+    progress(0.5, waitText_initialize)
+    #generate welcome message
+    if mode.welcomeMsg:
+        welMsg = mode.welcomeMsg
+    else:
+        welMsg = qa_chain_st({'question': initialize_prompt, 'chat_history':[]})['answer']
+    print('Chatbot initialized at ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+    return qa_chain_st, chainTuple[1], btn.update(interactive=True), initChatbot_btn.update('Chatbot ready. Now visit the chatbot Tab.', interactive=False)\
+        , oaiKey_tb.update(), gr.Tabs.update(selected='cb'), chatbot.update(value=[('', welMsg)])
+
 # just update the QA Chain, no updates to any UI
-def updateQaChain(temp, k, modelName, stdlQs, api_key_st, vsDict_st):
+def updateQaChain(temp, k, modelNameDD, stdlQs, api_key_st, vsDict_st):
     # if we are not adding data from ui, then use vsDict_hard as vectorstore
     if vsDict_st=={} and mode.type!='userInputDocs': vsDict_st=vsDict_hard
-    modelName = modelName.split('(')[0].strip() # so we can provide any info in brackets
-    # check if the input model is chat model or legacy model
-    try:
-        ChatOpenAI(openai_api_key=api_key_st, temperature=0,model_name=modelName,max_tokens=1).predict('')
-        llm = ChatOpenAI(openai_api_key=api_key_st, temperature=float(temp),model_name=modelName)
-    except:
-        OpenAI(openai_api_key=api_key_st, temperature=0,model_name=modelName,max_tokens=1).predict('')
-        llm = OpenAI(openai_api_key=api_key_st, temperature=float(temp),model_name=modelName)
+    
+    if api_key_st.get('service')=='openai':
+        if not 'openai' in modelNameDD:
+            modelNameDD = 'gpt-3.5-turbo (openai)'  # default model for openai
+        modelName = modelNameDD.split('(')[0].strip()
+        # check if the input model is chat model or legacy model
+        try:
+            ChatOpenAI(openai_api_key=api_key_st.get('oai_key','Null'), temperature=0,model_name=modelName,max_tokens=1).predict('')
+            llm = ChatOpenAI(openai_api_key=api_key_st.get('oai_key','Null'), temperature=float(temp),model_name=modelName)
+        except:
+            OpenAI(openai_api_key=api_key_st.get('oai_key','Null'), temperature=0,model_name=modelName,max_tokens=1).predict('')
+            llm = OpenAI(openai_api_key=api_key_st.get('oai_key','Null'), temperature=float(temp),model_name=modelName)
+    elif api_key_st.get('service')=='watsonx':
+        if not 'watsonx' in modelNameDD:
+            modelNameDD = 'meta-llama/llama-2-70b-chat (watsonx)' # default model for watsonx
+        modelName = modelNameDD.split('(')[0].strip()
+        wxModelParams = {
+            GenParams.DECODING_METHOD: DecodingMethods.SAMPLE,
+            GenParams.MAX_NEW_TOKENS: 1000,
+            GenParams.MIN_NEW_TOKENS: 1,
+            GenParams.TEMPERATURE: float(temp),
+            GenParams.TOP_K: 50,
+            GenParams.TOP_P: 1
+        }
+        flan_ul2_model = Model(
+                model_id=modelName, 
+                params=wxModelParams, 
+                credentials=api_key_st['credentials'], project_id=api_key_st['project_id'])
+        llm = WatsonxLLM(model=flan_ul2_model)
+    else:
+        raise Exception('Error: Invalid or None Credentials')
     # settingsUpdated = 'Settings updated:'+ ' Model=' + modelName + ', Temp=' + str(temp)+ ', k=' + str(k)
     # gr.Info(settingsUpdated)
     
@@ -150,7 +192,7 @@ def updateQaChain(temp, k, modelName, stdlQs, api_key_st, vsDict_st):
                     return_generated_question=True
                 )
     
-    return qa_chain_st
+    return qa_chain_st, model_dd.update(value=modelNameDD)
         
 
 def respond(message, chat_history, qa_chain):
@@ -172,7 +214,7 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
     # Initialize state variables - stored in this browser session - these can only be used within input or output of .click/.submit etc, not as a python var coz they are not stored in backend, only as a frontend gradio component
     # but if you initialize it with a default value, that value will be stored in backend and accessible across all users. You can also change it with statear.value='newValue'
     qa_state = gr.State()
-    api_key_state = gr.State(getPersonalBotApiKey() if mode.type=='personalBot' else 'Null') # can be string (OpenAI) or dict (WX)
+    api_key_state = gr.State(getPersonalBotApiKey() if mode.type=='personalBot' else {}) # can be string (OpenAI) or dict (WX)
     chromaVS_state = gr.State({})
 
 
@@ -183,9 +225,14 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
             with gr.Row():
                 with gr.Column():
                     oaiKey_tb = gr.Textbox(label="OpenAI API Key", type='password'\
-                            , info='You can find OpenAI API key at https://platform.openai.com/account/api-keys'\
-                            , placeholder='Enter your API key here and hit enter to begin chatting')
-                    oaiKey_btn = gr.Button("Submit API Key")
+                            , info='You can find OpenAI API key at https://platform.openai.com/account/api-keys')
+                    oaiKey_btn = gr.Button("Submit OpenAI API Key")
+                with gr.Column():
+                    wxKey_tb = gr.Textbox(label="Watsonx API Key", type='password'\
+                            , info='You can find IBM Cloud API Key at Manage > Access (IAM) > API keys on https://cloud.ibm.com/iam/overview')
+                    wxPid_tb = gr.Textbox(label="Watsonx Project ID"\
+                            , info='You can find Project ID at Project -> Manage -> General -> Details on https://dataplatform.cloud.ibm.com/wx/home')
+                    wxKey_btn = gr.Button("Submit Watsonx Credentials")
             with gr.Row(visible=mode.uiAddDataVis):
                 upload_fb = gr.Files(scale=5, label="Upload (multiple) Files - pdf/txt/docx supported", file_types=['.doc', '.docx', 'text', '.pdf', '.csv'])
                 urls_tb = gr.Textbox(scale=5, label="Enter URLs starting with https (comma separated)"\
@@ -203,8 +250,6 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
             with gr.Row():
                 btn = gr.Button("Send Message", interactive=False, variant="primary")
                 clear = gr.ClearButton(components=[msg, chatbot, srcDocs], value="Clear chat history")
-            # exp_comp = gr.Dataset(scale=0.7, samples=[['123'],['456'], ['123'],['456'],['456']], components=[msg], label='Examples (auto generated by LLM)', visible=False)
-            # gr.Examples(examples=exps,  inputs=msg)
             with gr.Accordion("Advance Settings - click to expand", open=False):
                 with gr.Row():
                     with gr.Column():
@@ -220,23 +265,27 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
                    
     ### Setup the Gradio Event Listeners
 
-    # API button
-    oaiKey_btn_args = {'fn':setOaiApiKey, 'inputs':[oaiKey_tb], 'outputs':[oaiKey_tb, oaiKey_btn, api_key_state]}
+    # OpenAI API button
+    oaiKey_btn_args = {'fn':setOaiApiKey, 'inputs':[oaiKey_tb], 'outputs':[oaiKey_tb, oaiKey_btn, wxKey_tb, wxPid_tb, wxKey_btn, api_key_state]}
     oaiKey_btn.click(**oaiKey_btn_args)
     oaiKey_tb.submit(**oaiKey_btn_args)
+
+    # Watsonx Creds button
+    wxKey_btn_args = {'fn':setWxApiKey, 'inputs':[wxKey_tb, wxPid_tb], 'outputs':[wxKey_tb, wxPid_tb, wxKey_btn, oaiKey_tb, oaiKey_btn, api_key_state]}
+    wxKey_btn.click(**wxKey_btn_args)
 
     # Data Ingest Button
     data_ingest_event = data_ingest_btn.click(uiData_vecStore, [upload_fb, urls_tb, api_key_state, chromaVS_state], [chromaVS_state, status_tb, data_ingest_btn, upload_fb, urls_tb])
 
     # Adv Settings
-    advSet_args = {'fn':updateQaChain, 'inputs':[temp_sld, k_sld, model_dd, stdlQs_rb, api_key_state, chromaVS_state], 'outputs':[qa_state]}
+    advSet_args = {'fn':updateQaChain, 'inputs':[temp_sld, k_sld, model_dd, stdlQs_rb, api_key_state, chromaVS_state], 'outputs':[qa_state, model_dd]}
     temp_sld.release(**advSet_args)
     k_sld.release(**advSet_args)
     model_dd.change(**advSet_args)
     stdlQs_rb.change(**advSet_args)
 
     # Initialize button
-    initCb_args = {'fn':initializeChatbot, 'inputs':[temp_sld, k_sld, model_dd, stdlQs_rb, api_key_state, chromaVS_state], 'outputs':[qa_state, btn, initChatbot_btn, oaiKey_tb, tabs, chatbot]}
+    initCb_args = {'fn':initializeChatbot, 'inputs':[temp_sld, k_sld, model_dd, stdlQs_rb, api_key_state, chromaVS_state], 'outputs':[qa_state, model_dd, btn, initChatbot_btn, oaiKey_tb, tabs, chatbot]}
     if mode.type=='personalBot':
         demo.load(**initCb_args) # load Chatbot UI directly on startup
     initChatbot_btn.click(**initCb_args)
