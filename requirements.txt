@@ -8,3 +8,5 @@ gradio
 PyMuPDF
 gdown
 docx2txt
+sentence-transformers
+ibm-watson-machine-learning
