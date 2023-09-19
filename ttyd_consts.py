@@ -65,7 +65,7 @@ url_tb_ph = 'https://example.com, https://another.com, https://anyremotedocument
 
 md_title_general = """
     ## Chat with your documents and websites<br>
-    Step 1) Enter your OpenAI API or Watsonx Credentials, and click Submit.<br>
+    Step 1) Enter your credentials, and click Submit.<br>
     Step 2) Upload your documents and/or enter URLs, then click Load Data.<br>
     Step 3) Once data is loaded, click Initialize Chatbot (at the bottom of the page) to start talking to your data.<br>
 
@@ -75,7 +75,7 @@ md_title_general = """
 
 md_title_nustian = """
     ## Chat with NUSTIAN website<br>
-    Step 1) Submit your OpenAI API Key.<br>
+    Step 1) Submit your credentials.<br>
     Step 2) Click Initialize Chatbot to start sending messages.<br>
 
     You may also play around with Advanced Settings, like changing the model name and parameters.
