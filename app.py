@@ -17,11 +17,12 @@ from langchain import OpenAI
 from langchain.document_loaders import WebBaseLoader, TextLoader, Docx2txtLoader, PyMuPDFLoader
 from whatsapp_chat_custom import WhatsAppChatLoader # use this instead of from langchain.document_loaders import WhatsAppChatLoader
 
-from ibm_watson_machine_learning.foundation_models.utils.enums import ModelTypes
 from ibm_watson_machine_learning.metanames import GenTextParamsMetaNames as GenParams
 from ibm_watson_machine_learning.foundation_models.utils.enums import DecodingMethods
 from ibm_watson_machine_learning.foundation_models import Model
 from ibm_watson_machine_learning.foundation_models.extensions.langchain import WatsonxLLM
+
+import genai
 
 from collections import deque
 import re
@@ -64,28 +65,37 @@ if mode.type!='userInputDocs':
 
 ###############################################################################################
 
-def setOaiApiKey(api_key):
-    credComps = [oaiKey_btn, wxKey_tb, wxPid_tb, wxKey_btn]
-    api_key = getOaiCreds(api_key)
+def setOaiApiKey(creds):
+    creds = getOaiCreds(creds)
     try:
-        openai.Model.list(api_key=api_key.get('oai_key','Null')) # test the API key
-        api_key_st = api_key
-        return oaiKey_tb.update('API Key accepted', interactive=False, type='text'), *[x.update(interactive=False) for x in credComps], api_key_st
+        openai.Model.list(api_key=creds.get('oai_key','Null')) # test the API key
+        api_key_st = creds
+        return 'OpenAI credentials accepted', *[x.update(interactive=False) for x in credComps_btn_tb], api_key_st
     except Exception as e:
-        return oaiKey_tb.update(str(e), type='text'), *[x.update() for x in credComps+[api_key_state]]
-    
+        gr.Warning(str(e))
+        return [x.update() for x in credComps_op]
+
+def setBamApiKey(creds):
+    creds = getBamCreds(creds)
+    try:
+        genai.Model.models(credentials=creds['bam_creds'])
+        api_key_st = creds
+        return 'BAM credentials accepted', *[x.update(interactive=False) for x in credComps_btn_tb], api_key_st
+    except Exception as e:
+        gr.Warning(str(e))
+        return [x.update() for x in credComps_op]
 
 def setWxApiKey(key, p_id):
-    credComps = [wxKey_btn, oaiKey_tb, oaiKey_btn]
-    api_key = getWxCreds(key, p_id)
+    creds = getWxCreds(key, p_id)
     try:
-        testModel = Model(model_id=ModelTypes.FLAN_UL2, credentials=api_key['credentials'], project_id=api_key['project_id']) # test the API key
-        del testModel
-        api_key_st = api_key
-        return *[x.update('Watsonx credentials accepted', interactive=False, type='text') for x in [wxKey_tb, wxPid_tb]], *[x.update(interactive=False) for x in credComps], api_key_st
+        Model(model_id='google/flan-ul2', credentials=creds['credentials'], project_id=creds['project_id']) # test the API key
+        api_key_st = creds
+        return 'Watsonx credentials accepted', *[x.update(interactive=False) for x in credComps_btn_tb], api_key_st
     except Exception as e:
-        return *[x.update(str(e), type='text') for x in [wxKey_tb, wxPid_tb]], *[x.update() for x in credComps+[api_key_state]]
+        gr.Warning(str(e))
+        return [x.update() for x in credComps_op]
     
+
 # convert user uploaded data to vectorstore
 def uiData_vecStore(userFiles, userUrls, api_key_st, vsDict_st={}, progress=gr.Progress()):
     opComponents = [data_ingest_btn, upload_fb, urls_tb]
@@ -102,6 +112,7 @@ def uiData_vecStore(userFiles, userUrls, api_key_st, vsDict_st={}, progress=gr.P
         for file in file_paths:
             os.remove(file)
     else:
+        gr.Error('No documents found')
         return {}, '', *[x.update() for x in opComponents]
     # Splitting and Chunks
     docs = split_docs(documents)
@@ -109,7 +120,8 @@ def uiData_vecStore(userFiles, userUrls, api_key_st, vsDict_st={}, progress=gr.P
     try:
         embeddings = getEmbeddingFunc(api_key_st)
     except Exception as e:
-        return {}, str(e), *[x.update() for x in opComponents]
+        gr.Error(str(e))
+        return {}, '', *[x.update() for x in opComponents]
     
     progress(0.5, 'Creating Vector Database')
     vsDict_st = getVsDict(embeddings, docs, vsDict_st)
@@ -130,45 +142,30 @@ def initializeChatbot(temp, k, modelName, stdlQs, api_key_st, vsDict_st, progres
     if mode.welcomeMsg:
         welMsg = mode.welcomeMsg
     else:
-        welMsg = qa_chain_st({'question': initialize_prompt, 'chat_history':[]})['answer']
+        # welMsg = qa_chain_st({'question': initialize_prompt, 'chat_history':[]})['answer']
+        welMsg = welcomeMsgDefault
     print('Chatbot initialized at ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     return qa_chain_st, chainTuple[1], btn.update(interactive=True), initChatbot_btn.update('Chatbot ready. Now visit the chatbot Tab.', interactive=False)\
-        , oaiKey_tb.update(), gr.Tabs.update(selected='cb'), chatbot.update(value=[('', welMsg)])
+        , status_tb.update(), gr.Tabs.update(selected='cb'), chatbot.update(value=[('Hi', welMsg)])
 
 # just update the QA Chain, no updates to any UI
 def updateQaChain(temp, k, modelNameDD, stdlQs, api_key_st, vsDict_st):
     # if we are not adding data from ui, then use vsDict_hard as vectorstore
     if vsDict_st=={} and mode.type!='userInputDocs': vsDict_st=vsDict_hard
     
-    if api_key_st.get('service')=='openai':
+    if api_key_st['service']=='openai':
         if not 'openai' in modelNameDD:
             modelNameDD = 'gpt-3.5-turbo (openai)'  # default model for openai
-        modelName = modelNameDD.split('(')[0].strip()
-        # check if the input model is chat model or legacy model
-        try:
-            ChatOpenAI(openai_api_key=api_key_st.get('oai_key','Null'), temperature=0,model_name=modelName,max_tokens=1).predict('')
-            llm = ChatOpenAI(openai_api_key=api_key_st.get('oai_key','Null'), temperature=float(temp),model_name=modelName)
-        except:
-            OpenAI(openai_api_key=api_key_st.get('oai_key','Null'), temperature=0,model_name=modelName,max_tokens=1).predict('')
-            llm = OpenAI(openai_api_key=api_key_st.get('oai_key','Null'), temperature=float(temp),model_name=modelName)
-    elif api_key_st.get('service')=='watsonx':
+        llm = getOaiLlm(temp, modelNameDD, api_key_st)
+    elif api_key_st['service']=='watsonx':
         if not 'watsonx' in modelNameDD:
             modelNameDD = 'meta-llama/llama-2-70b-chat (watsonx)' # default model for watsonx
-        modelName = modelNameDD.split('(')[0].strip()
-        wxModelParams = {
-            GenParams.DECODING_METHOD: DecodingMethods.SAMPLE,
-            GenParams.MAX_NEW_TOKENS: 1000,
-            GenParams.MIN_NEW_TOKENS: 1,
-            GenParams.TEMPERATURE: float(temp),
-            GenParams.TOP_K: 50,
-            GenParams.TOP_P: 1
-        }
-        flan_ul2_model = Model(
-                model_id=modelName, 
-                params=wxModelParams, 
-                credentials=api_key_st['credentials'], project_id=api_key_st['project_id'])
-        llm = WatsonxLLM(model=flan_ul2_model)
+        llm = getWxLlm(temp, modelNameDD, api_key_st)
+    elif api_key_st['service']=='bam':
+        if not 'bam' in modelNameDD:
+            modelNameDD = 'ibm/granite-13b-sft (bam)' # default model for bam
+        llm = getBamLlm(temp, modelNameDD, api_key_st)
     else:
         raise Exception('Error: Invalid or None Credentials')
     # settingsUpdated = 'Settings updated:'+ ' Model=' + modelName + ', Temp=' + str(temp)+ ', k=' + str(k)
@@ -196,7 +193,7 @@ def updateQaChain(temp, k, modelNameDD, stdlQs, api_key_st, vsDict_st):
         
 
 def respond(message, chat_history, qa_chain):
-    result = qa_chain({'question': message, "chat_history": [tuple(x) for x in chat_history]})
+    result = qa_chain({'question': message, "chat_history": [tuple(x) for x in chat_history[1:]]})
     src_docs = getSourcesFromMetadata([x.metadata for x in result["source_documents"]], sourceOnly=False)[0]
     # streaming
     streaming_answer = ""
@@ -228,6 +225,10 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
                             , info='You can find OpenAI API key at https://platform.openai.com/account/api-keys')
                     oaiKey_btn = gr.Button("Submit OpenAI API Key")
                 with gr.Column():
+                    bamKey_tb = gr.Textbox(label="BAM API Key", type='password'\
+                            , info='Internal IBMers only')
+                    bamKey_btn = gr.Button("Submit BAM API Key")
+                with gr.Column():
                     wxKey_tb = gr.Textbox(label="Watsonx API Key", type='password'\
                             , info='You can find IBM Cloud API Key at Manage > Access (IAM) > API keys on https://cloud.ibm.com/iam/overview')
                     wxPid_tb = gr.Textbox(label="Watsonx Project ID"\
@@ -239,12 +240,15 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
                                     , info=url_tb_info\
                                     , placeholder=url_tb_ph)
                 data_ingest_btn = gr.Button("Load Data")
-            status_tb = gr.TextArea(label='Status bar', show_label=False, visible=mode.uiAddDataVis)
+            status_tb = gr.TextArea(label='Status Info')
             initChatbot_btn = gr.Button("Initialize Chatbot", variant="primary")
 
+        credComps_btn_tb = [oaiKey_tb, oaiKey_btn, bamKey_tb, bamKey_btn, wxKey_tb, wxPid_tb, wxKey_btn]
+        credComps_op = [status_tb] + credComps_btn_tb + [api_key_state]
+        
         with gr.Tab('Chatbot', id='cb'):
             with gr.Row():
-                chatbot = gr.Chatbot(label="Chat History", scale=2)
+                chatbot = gr.Chatbot(label="Chat History", scale=2, avatar_images=(user_avatar, bot_avatar))
                 srcDocs = gr.TextArea(label="References")
             msg = gr.Textbox(label="User Input",placeholder="Type your questions here")
             with gr.Row():
@@ -266,12 +270,17 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
     ### Setup the Gradio Event Listeners
 
     # OpenAI API button
-    oaiKey_btn_args = {'fn':setOaiApiKey, 'inputs':[oaiKey_tb], 'outputs':[oaiKey_tb, oaiKey_btn, wxKey_tb, wxPid_tb, wxKey_btn, api_key_state]}
+    oaiKey_btn_args = {'fn':setOaiApiKey, 'inputs':[oaiKey_tb], 'outputs':credComps_op}
     oaiKey_btn.click(**oaiKey_btn_args)
     oaiKey_tb.submit(**oaiKey_btn_args)
 
+    # BAM API button
+    bamKey_btn_args = {'fn':setBamApiKey, 'inputs':[bamKey_tb], 'outputs':credComps_op}
+    bamKey_btn.click(**bamKey_btn_args)
+    bamKey_tb.submit(**bamKey_btn_args)
+
     # Watsonx Creds button
-    wxKey_btn_args = {'fn':setWxApiKey, 'inputs':[wxKey_tb, wxPid_tb], 'outputs':[wxKey_tb, wxPid_tb, wxKey_btn, oaiKey_tb, oaiKey_btn, api_key_state]}
+    wxKey_btn_args = {'fn':setWxApiKey, 'inputs':[wxKey_tb, wxPid_tb], 'outputs':credComps_op}
     wxKey_btn.click(**wxKey_btn_args)
 
     # Data Ingest Button

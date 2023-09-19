@@ -20,6 +20,19 @@ import mimetypes
 from pathlib import Path
 import tiktoken
 
+from langchain.chat_models import ChatOpenAI
+from langchain import OpenAI
+
+from ibm_watson_machine_learning.metanames import GenTextParamsMetaNames as GenParams
+from ibm_watson_machine_learning.foundation_models.utils.enums import DecodingMethods
+from ibm_watson_machine_learning.foundation_models import Model
+from ibm_watson_machine_learning.foundation_models.extensions.langchain import WatsonxLLM
+
+
+import genai
+from genai.extensions.langchain import LangChainInterface
+from genai.schemas import GenerateParams
+
 # Regex pattern to match a URL
 HTTP_URL_PATTERN = r'^http[s]*://.+'
 
@@ -28,21 +41,26 @@ media_files = tuple([x for x in mimetypes.types_map if mimetypes.types_map[x].sp
 filter_strings = ['/email-protection#']
 
 def getOaiCreds(key):
-    if key:
-        return {'service': 'openai',
-                    'oai_key' : key
-                }
-    else:
-        return {} 
+    key = key if key else 'Null'
+    return {'service': 'openai',
+                'oai_key' : key
+            }
+
+
+def getBamCreds(key):
+    key = key if key else 'Null'
+    return {'service': 'bam',
+                'bam_creds' : genai.Credentials(key, api_endpoint='https://bam-api.res.ibm.com/v1')
+            }
+
 
 def getWxCreds(key, p_id):
-    if key and p_id:
-        return {'service': 'watsonx',
+    key = key if key else 'Null'
+    p_id = p_id if p_id else 'Null'
+    return {'service': 'watsonx',
                 'credentials' : {"url": "https://us-south.ml.cloud.ibm.com", "apikey": key },
-                'project_id': p_id
-                }
-    else:
-        return {}
+                    'project_id': p_id
+            }
 
 def getPersonalBotApiKey():
     if os.getenv("OPENAI_API_KEY"):
@@ -52,6 +70,45 @@ def getPersonalBotApiKey():
     else:
         return {}
     
+
+
+def getOaiLlm(temp, modelNameDD, api_key_st):
+    modelName = modelNameDD.split('(')[0].strip()
+    # check if the input model is chat model or legacy model
+    try:
+        ChatOpenAI(openai_api_key=api_key_st['oai_key'], temperature=0,model_name=modelName,max_tokens=1).predict('')
+        llm = ChatOpenAI(openai_api_key=api_key_st['oai_key'], temperature=float(temp),model_name=modelName)
+    except:
+        OpenAI(openai_api_key=api_key_st['oai_key'], temperature=0,model_name=modelName,max_tokens=1).predict('')
+        llm = OpenAI(openai_api_key=api_key_st['oai_key'], temperature=float(temp),model_name=modelName)
+    return llm
+
+
+def getWxLlm(temp, modelNameDD, api_key_st):
+    modelName = modelNameDD.split('(')[0].strip()
+    wxModelParams = {
+        GenParams.DECODING_METHOD: DecodingMethods.SAMPLE,
+        GenParams.MAX_NEW_TOKENS: 1000,
+        GenParams.MIN_NEW_TOKENS: 1,
+        GenParams.TEMPERATURE: float(temp),
+        GenParams.TOP_K: 50,
+        GenParams.TOP_P: 1
+    }
+    model = Model(
+            model_id=modelName, 
+            params=wxModelParams, 
+            credentials=api_key_st['credentials'], project_id=api_key_st['project_id'])
+    llm = WatsonxLLM(model=model)
+    return llm
+
+
+def getBamLlm(temp, modelNameDD, api_key_st):
+    modelName = modelNameDD.split('(')[0].strip()
+    parameters = GenerateParams(decoding_method="sample", max_new_tokens=1024, temperature=float(temp), top_k=50, top_p=1)
+    llm = LangChainInterface(model=modelName, params=parameters, credentials=api_key_st['bam_creds'])
+    return llm
+
+
 def get_hyperlinks(url):
     try:
         reqs = requests.get(url)
@@ -249,7 +306,7 @@ def getEmbeddingFunc(creds):
         if creds.get('service')=='openai':
             embeddings = OpenAIEmbeddings(openai_api_key=creds.get('oai_key','Null'))
         # WX key used
-        elif creds.get('service')=='watsonx':
+        elif creds.get('service')=='watsonx' or creds.get('service')=='bam':
             # testModel = Model(model_id=ModelTypes.FLAN_UL2, credentials=creds['credentials'], project_id=creds['project_id']) # test the API key
             # del testModel
             embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2") # for now use OpenSource model for embedding as WX doesnt have any embedding model

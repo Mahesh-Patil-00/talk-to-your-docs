@@ -8,6 +8,11 @@ initialize_prompt = """Write a short welcome message to the user. Describe the d
  If this data is about a person, mention his name instead of using pronouns. After describing the overview, you should mention top 3 example questions that the user can ask about this data.\
  \n\nYour response should be short and precise. Format of your response should be Summary:\n{Description and Summary} \n\n Example Questions:\n{Example Questions}"""
 
+
+user_avatar = 'https://cdn-icons-png.flaticon.com/512/6861/6861326.png'
+# user_avatar = None
+bot_avatar = 'https://cdn-icons-png.flaticon.com/512/1782/1782384.png'
+
 nustian_exps = ['Tell me about NUSTIAN',
                 'Who is the NUSTIAN regional lead for Silicon Valley?',
                 'Tell me details about NUSTIAN coaching program.',
@@ -23,10 +28,35 @@ stdlQs_rb_choices =  ['Retrieve relavant docs using original question, send orig
                     , 'Retrieve relavant docs using standalone question, send standalone question to LLM']
 
 
+bam_models = sorted(['bigscience/bloom',
+ 'salesforce/codegen2-16b',
+ 'codellama/codellama-34b-instruct',
+ 'tiiuae/falcon-40b',
+ 'ibm/falcon-40b-8lang-instruct',
+ 'google/flan-t5-xl',
+ 'google/flan-t5-xxl',
+ 'google/flan-ul2',
+ 'eleutherai/gpt-neox-20b',
+ 'togethercomputer/gpt-neoxt-chat-base-20b',
+ 'ibm/granite-13b-sft',
+ 'ibm/granite-13b-sft-cft',
+ 'ibm/granite-3b-code-v1',
+ 'meta-llama/llama-2-13b',
+ 'meta-llama/llama-2-13b-chat',
+ 'meta-llama/llama-2-13b-chat-beam',
+ 'meta-llama/llama-2-70b',
+ 'meta-llama/llama-2-70b-chat',
+ 'meta-llama/llama-2-7b',
+ 'meta-llama/llama-2-7b-chat',
+ 'mosaicml/mpt-30b',
+ 'ibm/mpt-7b-instruct',
+ 'bigscience/mt0-xxl',
+ 'bigcode/starcoder',
+ 'google/ul2'])
 
-model_dd_info = 'You can also input any OpenAI model name, compatible with /v1/completions or /v1/chat/completions endpoint. Details: https://platform.openai.com/docs/models/'
+model_dd_info = 'You can also input any OpenAI model name or BAM model ID.'
 
-model_dd_choices = ['gpt-3.5-turbo (openai)', 'gpt-3.5-turbo-16k (openai)', 'gpt-4 (openai)', 'text-davinci-003 (Legacy - openai)', 'text-curie-001 (Legacy - openai)', 'babbage-002 (openai)'] + [model.value+' (watsonx)' for model in ModelTypes]
+model_dd_choices = ['gpt-3.5-turbo (openai)', 'gpt-3.5-turbo-16k (openai)', 'gpt-4 (openai)', 'text-davinci-003 (Legacy - openai)', 'text-curie-001 (Legacy - openai)', 'babbage-002 (openai)'] + [model.value+' (watsonx)' for model in ModelTypes] + [model + ' (bam)' for model in bam_models]
 
 url_tb_info = 'Upto 100 domain webpages will be crawled for each URL. You can also enter online PDF files.'
 
@@ -70,6 +100,7 @@ welcomeMsgArslan = """Summary: The document provides a comprehensive overview of
 3. Tell me about Arslan's educational background.
 """
 
+welcomeMsgDefault = """Hello and welcome! I'm your personal data assistant. Ask me anything about your data and I'll try my best to answer."""
 
 class TtydMode():
     def __init__(self, name='', title='', type='', dir=None, files=[], urls=[], vis=False, welMsg='', def_k=4):
