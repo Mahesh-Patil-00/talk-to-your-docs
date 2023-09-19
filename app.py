@@ -294,7 +294,7 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
     stdlQs_rb.change(**advSet_args)
 
     # Initialize button
-    initCb_args = {'fn':initializeChatbot, 'inputs':[temp_sld, k_sld, model_dd, stdlQs_rb, api_key_state, chromaVS_state], 'outputs':[qa_state, model_dd, btn, initChatbot_btn, oaiKey_tb, tabs, chatbot]}
+    initCb_args = {'fn':initializeChatbot, 'inputs':[temp_sld, k_sld, model_dd, stdlQs_rb, api_key_state, chromaVS_state], 'outputs':[qa_state, model_dd, btn, initChatbot_btn, status_tb, tabs, chatbot]}
     if mode.type=='personalBot':
         demo.load(**initCb_args) # load Chatbot UI directly on startup
     initChatbot_btn.click(**initCb_args)
