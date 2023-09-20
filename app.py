@@ -141,7 +141,6 @@ def initializeChatbot(temp, k, modelNameDD, stdlQs, api_key_st, vsDict_st, progr
     if mode.welcomeMsg:
         welMsg = mode.welcomeMsg
     else:
-        # welMsg = qa_chain_st({'question': initialize_prompt, 'chat_history':[]})['answer']
         welMsg = welcomeMsgDefault
     print('Chatbot initialized at ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
