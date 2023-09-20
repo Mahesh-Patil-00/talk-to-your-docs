@@ -224,16 +224,16 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
                             , info='You can find OpenAI API key at https://platform.openai.com/account/api-keys')
                     oaiKey_btn = gr.Button("Submit OpenAI API Key")
                 with gr.Column():
-                    bamKey_tb = gr.Textbox(label="BAM API Key", type='password'\
-                            , info='Internal IBMers only')
-                    bamKey_btn = gr.Button("Submit BAM API Key")
-                with gr.Column():
                     with gr.Row():
                         wxKey_tb = gr.Textbox(label="Watsonx API Key", type='password'\
                                 , info='You can find IBM Cloud API Key at Manage > Access (IAM) > API keys on https://cloud.ibm.com/iam/overview')
                         wxPid_tb = gr.Textbox(label="Watsonx Project ID"\
                                 , info='You can find Project ID at Project -> Manage -> General -> Details on https://dataplatform.cloud.ibm.com/wx/home')
                     wxKey_btn = gr.Button("Submit Watsonx Credentials")
+                with gr.Column():
+                    bamKey_tb = gr.Textbox(label="BAM API Key", type='password'\
+                            , info='Internal IBMers only')
+                    bamKey_btn = gr.Button("Submit BAM API Key")
             with gr.Row(visible=mode.uiAddDataVis):
                 upload_fb = gr.Files(scale=5, label="Upload (multiple) Files - pdf/txt/docx supported", file_types=['.doc', '.docx', 'text', '.pdf', '.csv'])
                 urls_tb = gr.Textbox(scale=5, label="Enter URLs starting with https (comma separated)"\
