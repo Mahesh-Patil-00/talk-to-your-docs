@@ -84,15 +84,18 @@ def getOaiLlm(temp, modelNameDD, api_key_st):
     return llm
 
 
+MAX_NEW_TOKENS = 1024
+TOP_K = None
+TOP_P = 1
+
 def getWxLlm(temp, modelNameDD, api_key_st):
     modelName = modelNameDD.split('(')[0].strip()
     wxModelParams = {
         GenParams.DECODING_METHOD: DecodingMethods.SAMPLE,
-        GenParams.MAX_NEW_TOKENS: 1000,
-        GenParams.MIN_NEW_TOKENS: 1,
+        GenParams.MAX_NEW_TOKENS: MAX_NEW_TOKENS,
         GenParams.TEMPERATURE: float(temp),
-        GenParams.TOP_K: 50,
-        GenParams.TOP_P: 1
+        GenParams.TOP_K: TOP_K,
+        GenParams.TOP_P: TOP_P
     }
     model = Model(
             model_id=modelName, 
@@ -104,7 +107,7 @@ def getWxLlm(temp, modelNameDD, api_key_st):
 
 def getBamLlm(temp, modelNameDD, api_key_st):
     modelName = modelNameDD.split('(')[0].strip()
-    parameters = GenerateParams(decoding_method="sample", max_new_tokens=1024, temperature=float(temp), top_k=50, top_p=1)
+    parameters = GenerateParams(decoding_method="sample", max_new_tokens=MAX_NEW_TOKENS, temperature=float(temp), top_k=TOP_K, top_p=TOP_P)
     llm = LangChainInterface(model=modelName, params=parameters, credentials=api_key_st['bam_creds'])
     return llm
 
