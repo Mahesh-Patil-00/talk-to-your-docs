@@ -164,7 +164,7 @@ def updateQaChain(temp, k, modelNameDD, stdlQs, api_key_st, vsDict_st):
         llm = getWxLlm(temp, modelNameDD, api_key_st)
     elif api_key_st['service']=='bam':
         if not 'bam' in modelNameDD:
-            modelNameDD = 'ibm/granite-13b-sft (bam)' # default model for bam
+            modelNameDD = 'meta-llama/llama-2-70b-chat (bam)' # default model for bam
         llm = getBamLlm(temp, modelNameDD, api_key_st)
     else:
         raise Exception('Error: Invalid or None Credentials')
