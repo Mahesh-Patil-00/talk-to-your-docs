@@ -138,4 +138,4 @@ class TtydMode():
 
 mode_general = TtydMode(name='general', title=md_title_general, type='userInputDocs', vis=True)
 mode_nustian = TtydMode(name='nustian', title=md_title_nustian, type='fixedDocs', urls=['https://nustianusa.org', 'https://nustian.ca'])
-mode_arslan = TtydMode(name='arslan', title=md_title_arslan, type='personalBot', welMsg=welcomeMsgArslan, def_k=8, gDrFolder=gDrFolder)
+mode_arslan = TtydMode(name='arslan', title=md_title_arslan, type='personalBot', welMsg=welcomeMsgArslan, def_k=4, gDrFolder=gDrFolder)
