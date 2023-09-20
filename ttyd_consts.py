@@ -7,10 +7,13 @@ exp_query = 'Generate top 5 questions that I can ask about this data. Questions 
 
 waitText_initialize = 'Preparing the documents, please wait...'
 
-initialize_prompt = """Write a short welcome message to the user. Describe the data with a comprehensive overview including short summary.\
- If this data is about a person, mention his name instead of using pronouns. After describing the overview, you should mention top 3 example questions that the user can ask about this data.\
- \n\nYour response should be short and precise. Format of your response should be Summary:\n{Description and Summary} \n\n Example Questions:\n{Example Questions}"""
+# initialize_prompt = """Write a short welcome message to the user. Describe the data with a comprehensive overview including short summary.\
+#  If this data is about a person, mention his name instead of using pronouns. After describing the overview, you should mention top 3 example questions that the user can ask about this data.\
+#  \n\nYour response should be short and precise. Format of your response should be Summary:\n{Description and Summary} \n\n Example Questions:\n{Example Questions}"""
 
+initialize_prompt = """
+Describe an overview of this data. Also generate 3 example questions that can be asked about this data.
+"""
 
 user_avatar = 'https://cdn-icons-png.flaticon.com/512/6861/6861326.png'
 # user_avatar = None
