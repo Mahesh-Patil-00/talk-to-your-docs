@@ -229,10 +229,11 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
                             , info='Internal IBMers only')
                     bamKey_btn = gr.Button("Submit BAM API Key")
                 with gr.Column():
-                    wxKey_tb = gr.Textbox(label="Watsonx API Key", type='password'\
-                            , info='You can find IBM Cloud API Key at Manage > Access (IAM) > API keys on https://cloud.ibm.com/iam/overview')
-                    wxPid_tb = gr.Textbox(label="Watsonx Project ID"\
-                            , info='You can find Project ID at Project -> Manage -> General -> Details on https://dataplatform.cloud.ibm.com/wx/home')
+                    with gr.Row():
+                        wxKey_tb = gr.Textbox(label="Watsonx API Key", type='password'\
+                                , info='You can find IBM Cloud API Key at Manage > Access (IAM) > API keys on https://cloud.ibm.com/iam/overview')
+                        wxPid_tb = gr.Textbox(label="Watsonx Project ID"\
+                                , info='You can find Project ID at Project -> Manage -> General -> Details on https://dataplatform.cloud.ibm.com/wx/home')
                     wxKey_btn = gr.Button("Submit Watsonx Credentials")
             with gr.Row(visible=mode.uiAddDataVis):
                 upload_fb = gr.Files(scale=5, label="Upload (multiple) Files - pdf/txt/docx supported", file_types=['.doc', '.docx', 'text', '.pdf', '.csv'])
