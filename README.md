@@ -34,8 +34,8 @@ docker run --rm -d -p 7860:7860 --env-file ./.env arslan2k12/ttyd_arslanbot
 
 Contents of `.env` file:
 ```
-TTYD_MODE=personalBot_john
-# replace john with your name - use only small alphabets, no special characters
+TTYD_MODE=personalBot_John
+#replace John with your name - use only alphabets, no special characters
 
 GDRIVE_FOLDER_URL=https://drive.google.com/drive/folders/1ce1n1kleS1FOotdcu5joXeSRu_xnHjDt
 # replace with your Google Drive folder URL that has all your knowledge base files (.pdf, .docs, .txt) - make sure this folder is publicly accessible (everyone with the link)

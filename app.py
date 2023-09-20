@@ -1,4 +1,3 @@
-import gdown
 from dotenv import load_dotenv
 import datetime
 import openai
@@ -38,16 +37,16 @@ from ttyd_consts import *
 ###############################################################################################
 
 load_dotenv()
+TTYD_MODE = os.getenv("TTYD_MODE",'')
+
 
 # select the mode when starting container - modes options are in ttyd_consts.py
-if (os.getenv("TTYD_MODE",'')).split('_')[0]=='personalBot':
+if TTYD_MODE.split('_')[0]=='personalBot':
     mode = mode_arslan
-    gDriveUrl = (os.getenv("GDRIVE_FOLDER_URL",'')).replace('?usp=sharing','')
-    # output folder of googe drive folder will be taken as input dir of personalBot
-    gdown.download_folder(url=gDriveUrl, output=mode.inputDir, quiet=True)
-    if os.getenv("TTYD_MODE",'')!='personalBot_arslan':
-        mode.title=''
-        mode.welcomeMsg=''
+    if TTYD_MODE!='personalBot_arslan':
+        user = TTYD_MODE.split('_')[1]
+        mode.title='## Talk to '+user
+        mode.welcomeMsg= welcomeMsgUser(user)
 
 elif os.getenv("TTYD_MODE",'')=='nustian':
     mode = mode_nustian
@@ -57,7 +56,7 @@ else:
 
 if mode.type!='userInputDocs':
     # local vector store as opposed to gradio state vector store, if we the user is not uploading the docs
-    vsDict_hard = localData_vecStore(getPersonalBotApiKey(), inputDir=mode.inputDir, file_list=mode.file_list, url_list=mode.url_list)
+    vsDict_hard = localData_vecStore(getPersonalBotApiKey(), inputDir=mode.inputDir, file_list=mode.file_list, url_list=mode.url_list, gGrUrl=mode.gDriveFolder)
 
 ###############################################################################################
 
@@ -133,9 +132,9 @@ def uiData_vecStore(userFiles, userUrls, api_key_st, vsDict_st={}, progress=gr.P
     return vsDict_st, src_str, *[x.update(interactive=False) for x in [data_ingest_btn, upload_fb]], urls_tb.update(interactive=False, placeholder='')
 
 # initialize chatbot function sets the QA Chain, and also sets/updates any other components to start chatting. updateQaChain function only updates QA chain and will be called whenever Adv Settings are updated.
-def initializeChatbot(temp, k, modelName, stdlQs, api_key_st, vsDict_st, progress=gr.Progress()):
+def initializeChatbot(temp, k, modelNameDD, stdlQs, api_key_st, vsDict_st, progress=gr.Progress()):
     progress(0.1, waitText_initialize)
-    chainTuple = updateQaChain(temp, k, modelName, stdlQs, api_key_st, vsDict_st)
+    chainTuple = updateQaChain(temp, k, modelNameDD, stdlQs, api_key_st, vsDict_st)
     qa_chain_st = chainTuple[0]
     progress(0.5, waitText_initialize)
     #generate welcome message
@@ -147,7 +146,7 @@ def initializeChatbot(temp, k, modelName, stdlQs, api_key_st, vsDict_st, progres
     print('Chatbot initialized at ', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     return qa_chain_st, chainTuple[1], btn.update(interactive=True), initChatbot_btn.update('Chatbot ready. Now visit the chatbot Tab.', interactive=False)\
-        , status_tb.update(), gr.Tabs.update(selected='cb'), chatbot.update(value=[('Hi', welMsg)])
+        , status_tb.update(), gr.Tabs.update(selected='cb'), chatbot.update(value=[('', welMsg)])
 
 # just update the QA Chain, no updates to any UI
 def updateQaChain(temp, k, modelNameDD, stdlQs, api_key_st, vsDict_st):
@@ -156,15 +155,15 @@ def updateQaChain(temp, k, modelNameDD, stdlQs, api_key_st, vsDict_st):
     
     if api_key_st['service']=='openai':
         if not 'openai' in modelNameDD:
-            modelNameDD = 'gpt-3.5-turbo (openai)'  # default model for openai
+            modelNameDD = changeModel(modelNameDD, OaiDefaultModel)
         llm = getOaiLlm(temp, modelNameDD, api_key_st)
     elif api_key_st['service']=='watsonx':
         if not 'watsonx' in modelNameDD:
-            modelNameDD = 'meta-llama/llama-2-70b-chat (watsonx)' # default model for watsonx
+            modelNameDD = changeModel(modelNameDD, WxDefaultModel)
         llm = getWxLlm(temp, modelNameDD, api_key_st)
     elif api_key_st['service']=='bam':
         if not 'bam' in modelNameDD:
-            modelNameDD = 'meta-llama/llama-2-70b-chat (bam)' # default model for bam
+            modelNameDD = changeModel(modelNameDD, BamDefaultModel)
         llm = getBamLlm(temp, modelNameDD, api_key_st)
     else:
         raise Exception('Error: Invalid or None Credentials')
@@ -261,8 +260,7 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
                         temp_sld = gr.Slider(minimum=0, maximum=1, step=0.1, value=0.7, label="Temperature", info='Sampling temperature to use when calling LLM. Defaults to 0.7')
                         k_sld = gr.Slider(minimum=1, maximum=10, step=1, value=mode.k, label="K", info='Number of relavant documents to return from Vector Store. Defaults to 4')
                         model_dd = gr.Dropdown(label='Model Name'\
-                                , choices=model_dd_choices\
-                                , value=model_dd_choices[0], allow_custom_value=True\
+                                , choices=model_dd_choices, allow_custom_value=True\
                                 , info=model_dd_info)
                     stdlQs_rb = gr.Radio(label='Standalone Question', info=stdlQs_rb_info\
                             , type='index', value=stdlQs_rb_choices[1]\

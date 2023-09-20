@@ -1,4 +1,7 @@
 from ibm_watson_machine_learning.foundation_models.utils.enums import ModelTypes
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 exp_query = 'Generate top 5 questions that I can ask about this data. Questions should be very precise and short, ideally less than 10 words.'
 
@@ -54,9 +57,15 @@ bam_models = sorted(['bigscience/bloom',
  'bigcode/starcoder',
  'google/ul2'])
 
-model_dd_info = 'You can also input any OpenAI model name or BAM model ID.'
+model_dd_info = 'Make sure your credentials are submitted before changing the model. You can also input any OpenAI model name or Watsonx/BAM model ID.' 
 
 model_dd_choices = ['gpt-3.5-turbo (openai)', 'gpt-3.5-turbo-16k (openai)', 'gpt-4 (openai)', 'text-davinci-003 (Legacy - openai)', 'text-curie-001 (Legacy - openai)', 'babbage-002 (openai)'] + [model.value+' (watsonx)' for model in ModelTypes] + [model + ' (bam)' for model in bam_models]
+
+
+OaiDefaultModel = 'gpt-3.5-turbo (openai)'
+WxDefaultModel = 'meta-llama/llama-2-70b-chat (watsonx)'
+BamDefaultModel =  'meta-llama/llama-2-70b-chat (bam)'
+
 
 url_tb_info = 'Upto 100 domain webpages will be crawled for each URL. You can also enter online PDF files.'
 
@@ -102,14 +111,22 @@ welcomeMsgArslan = """Summary: The document provides a comprehensive overview of
 
 welcomeMsgDefault = """Hello and welcome! I'm your personal data assistant. Ask me anything about your data and I'll try my best to answer."""
 
+
+def welcomeMsgUser(user):
+    return f"""Hi, Welcome to personal chatbot of {user}. I am trained on the documents {user} has provided me. Ask me anything about {user} and I'll try my best to answer."""
+
+
+gDrFolder=(os.getenv("GDRIVE_FOLDER_URL",'')).replace('?usp=sharing','')
+
 class TtydMode():
-    def __init__(self, name='', title='', type='', dir=None, files=[], urls=[], vis=False, welMsg='', def_k=4):
+    def __init__(self, name='', title='', type='', dir=None, files=[], urls=[], vis=False, welMsg='', def_k=4, gDrFolder=''):
         self.name = name
         self.title = title # markdown title for the top display
         self.type = type # userInputDocs, fixedDocs, personalBot
         self.inputDir=dir
         self.file_list=files
         self.url_list=urls
+        self.gDriveFolder=gDrFolder
         self.uiAddDataVis = vis # load data from user - this will be true for type = userInputDocs
         self.welcomeMsg = welMsg #welcome msg constant - if not provided LLM will generate it
         self.k = def_k # default k docs to retrieve
@@ -118,4 +135,4 @@ class TtydMode():
 
 mode_general = TtydMode(name='general', title=md_title_general, type='userInputDocs', vis=True)
 mode_nustian = TtydMode(name='nustian', title=md_title_nustian, type='fixedDocs', urls=['https://nustian.ca'])
-mode_arslan = TtydMode(name='arslan', title=md_title_arslan, type='personalBot', dir='./documents/', welMsg=welcomeMsgArslan, def_k=8)
+mode_arslan = TtydMode(name='arslan', title=md_title_arslan, type='personalBot', welMsg=welcomeMsgArslan, def_k=8, gDrFolder=gDrFolder)

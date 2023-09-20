@@ -1,5 +1,7 @@
 
 import datetime
+import gradio as gr
+import time
 import uuid
 import openai
 from langchain.embeddings import OpenAIEmbeddings
@@ -19,6 +21,7 @@ from urllib.parse import urlparse
 import mimetypes
 from pathlib import Path
 import tiktoken
+import gdown
 
 from langchain.chat_models import ChatOpenAI
 from langchain import OpenAI
@@ -67,6 +70,8 @@ def getPersonalBotApiKey():
         return getOaiCreds(os.getenv("OPENAI_API_KEY"))
     elif os.getenv("WX_API_KEY") and os.getenv("WX_PROJECT_ID"):
         return getWxCreds(os.getenv("WX_API_KEY"), os.getenv("WX_PROJECT_ID"))
+    elif os.getenv("BAM_API_KEY"):
+        return getBamCreds(os.getenv("BAM_API_KEY"))
     else:
         return {}
     
@@ -240,24 +245,30 @@ def ingestFiles(documents, files_list, prog=None):
             pass
         
         if doc is not None and doc[0].page_content:
-            if prog is not None: prog(1, desc='Loaded file: '+fPath.rsplit('/')[0])
+            if prog is not None: prog(0.9, desc='Loaded file: '+fPath.rsplit('/')[0])
             print('Loaded file:', fPath)
             documents.extend(doc)
     return documents
 
 
-def data_ingestion(inputDir=None, file_list=[], url_list=[], prog=None):
+def data_ingestion(inputDir=None, file_list=[], url_list=[], gDriveFolder='', prog=None):
     documents = []
+    # Ingestion from Google Drive Folder
+    if gDriveFolder:
+        opFolder = './gDriveDocs/'
+        gdown.download_folder(url=gDriveFolder, output=opFolder, quiet=True)
+        files = [str(x) for x in Path(opFolder).glob('**/*')]
+        documents = ingestFiles(documents, files, prog)
     # Ingestion from Input Directory
     if inputDir is not None:
         files = [str(x) for x in Path(inputDir).glob('**/*')]
-        documents = ingestFiles(documents, files)
+        documents = ingestFiles(documents, files, prog)
     if file_list:
         documents = ingestFiles(documents, file_list, prog)
     # Ingestion from URLs - also try https://python.langchain.com/docs/integrations/document_loaders/recursive_url_loader
     if url_list:
         for url in url_list:
-            documents = ingestURL(documents, url, prog=prog)        
+            documents = ingestURL(documents, url, prog=prog)
 
     # Cleanup documents
     for x in documents:
@@ -331,8 +342,8 @@ def getVsDict(embeddingFunc, docs, vsDict={}):
     return vsDict
 
 # used for Hardcoded documents only - not uploaded by user (userData_vecStore is separate function)
-def localData_vecStore(embKey={}, inputDir=None, file_list=[], url_list=[], vsDict={}):
-    documents = data_ingestion(inputDir, file_list, url_list)
+def localData_vecStore(embKey={}, inputDir=None, file_list=[], url_list=[], vsDict={}, gGrUrl=''):
+    documents = data_ingestion(inputDir, file_list, url_list, gGrUrl)
     if not documents:
        raise Exception('Error: No Documents Found')
     docs = split_docs(documents)
@@ -353,3 +364,9 @@ def num_tokens_from_string(string, encoding_name = "cl100k_base"):
     num_tokens = len(encoding.encode(string))
     return num_tokens
 
+def changeModel(oldModel, newModel):
+    if oldModel:
+        warning = 'Credentials not found for '+oldModel+'. Using default model '+newModel
+        gr.Warning(warning)
+        time.sleep(1)
+    return newModel
