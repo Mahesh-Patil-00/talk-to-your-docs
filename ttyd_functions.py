@@ -286,7 +286,7 @@ def getSourcesFromMetadata(metadata, sourceOnly=True, sepFileUrl=True):
             source = source.rsplit('/',1)[-1] if 'http' not in source else source
             notSource = []
             for k,v in x.items():
-                    if v is not None and k!='source' and k in ['page', 'title']:
+                    if v is not None and k!='source' and k in ['page']:
                         notSource.extend([f"{k}: {v}"])
             metadataText = ', '.join([f'source: {source}'] + notSource) if sourceOnly==False else source
             setSrc.add(metadataText)
