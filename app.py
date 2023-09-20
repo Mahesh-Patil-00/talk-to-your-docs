@@ -192,7 +192,7 @@ def updateQaChain(temp, k, modelNameDD, stdlQs, api_key_st, vsDict_st):
         
 
 def respond(message, chat_history, qa_chain):
-    result = qa_chain({'question': message, "chat_history": [tuple(x) for x in chat_history[1:]]})
+    result = qa_chain({'question': message, "chat_history": [tuple(x) for x in chat_history]})
     src_docs = getSourcesFromMetadata([x.metadata for x in result["source_documents"]], sourceOnly=False)[0]
     # streaming
     streaming_answer = ""
