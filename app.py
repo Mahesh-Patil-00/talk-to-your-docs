@@ -43,7 +43,7 @@ TTYD_MODE = os.getenv("TTYD_MODE",'')
 # select the mode when starting container - modes options are in ttyd_consts.py
 if TTYD_MODE.split('_')[0]=='personalBot':
     mode = mode_arslan
-    if TTYD_MODE!='personalBot_arslan':
+    if TTYD_MODE!='personalBot_Arslan':
         user = TTYD_MODE.split('_')[1]
         mode.title='## Talk to '+user
         mode.welcomeMsg= welcomeMsgUser(user)
@@ -69,7 +69,7 @@ def setOaiApiKey(creds):
     try:
         openai.Model.list(api_key=creds.get('oai_key','Null')) # test the API key
         api_key_st = creds
-        return 'OpenAI credentials accepted', *[x.update(interactive=False) for x in credComps_btn_tb], api_key_st
+        return 'OpenAI credentials accepted.', *[x.update(interactive=False) for x in credComps_btn_tb], api_key_st
     except Exception as e:
         gr.Warning(str(e))
         return [x.update() for x in credComps_op]
@@ -79,7 +79,7 @@ def setBamApiKey(creds):
     try:
         genai.Model.models(credentials=creds['bam_creds'])
         api_key_st = creds
-        return 'BAM credentials accepted', *[x.update(interactive=False) for x in credComps_btn_tb], api_key_st
+        return 'BAM credentials accepted.', *[x.update(interactive=False) for x in credComps_btn_tb], api_key_st
     except Exception as e:
         gr.Warning(str(e))
         return [x.update() for x in credComps_op]
@@ -89,7 +89,7 @@ def setWxApiKey(key, p_id):
     try:
         Model(model_id='google/flan-ul2', credentials=creds['credentials'], project_id=creds['project_id']) # test the API key
         api_key_st = creds
-        return 'Watsonx credentials accepted', *[x.update(interactive=False) for x in credComps_btn_tb], api_key_st
+        return 'Watsonx credentials accepted.', *[x.update(interactive=False) for x in credComps_btn_tb], api_key_st
     except Exception as e:
         gr.Warning(str(e))
         return [x.update() for x in credComps_op]
