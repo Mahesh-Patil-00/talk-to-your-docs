@@ -1,3 +1,4 @@
+from langchain import PromptTemplate
 from ibm_watson_machine_learning.foundation_models.utils.enums import ModelTypes
 import os
 from dotenv import load_dotenv
@@ -33,6 +34,16 @@ stdlQs_rb_choices =  ['Retrieve relavant docs using original question, send orig
                     , 'Retrieve relavant docs using standalone question, send original question to LLM'\
                     , 'Retrieve relavant docs using standalone question, send standalone question to LLM']
 
+
+llamaPromptTemplate = """
+<s>[INST] <<SYS>>
+Use the following pieces of context to answer the question at the end. If you don't know the answer, just say that you don't know, don't try to make up an answer.
+<</SYS>>
+{context}
+Question: {question} [/INST]
+"""
+
+promptLlama=PromptTemplate(input_variables=['context', 'question'], template=llamaPromptTemplate)
 
 bam_models = sorted(['bigscience/bloom',
  'salesforce/codegen2-16b',

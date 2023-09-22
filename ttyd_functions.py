@@ -10,7 +10,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings import SentenceTransformerEmbeddings
 
 import os
-from langchain.document_loaders import WebBaseLoader, TextLoader, Docx2txtLoader, PyMuPDFLoader
+from langchain.document_loaders import WebBaseLoader, TextLoader, Docx2txtLoader, PyMuPDFLoader, UnstructuredPowerPointLoader
 from whatsapp_chat_custom import WhatsAppChatLoader # use this instead of from langchain.document_loaders import WhatsAppChatLoader
 
 from collections import deque
@@ -241,6 +241,8 @@ def ingestFiles(documents, files_list, prog=None):
             doc = Docx2txtLoader(fPath).load()
         elif 'WhatsApp Chat with' in fPath and fPath.endswith('.csv'): # Convert Whatsapp TXT files to CSV using https://whatstk.streamlit.app/
             doc = WhatsAppChatLoader(fPath).load()
+        elif fPath.endswith(('.ppt', '.pptx')):
+            doc = UnstructuredPowerPointLoader(fPath).load()
         else:
             pass
         

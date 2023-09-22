@@ -169,12 +169,18 @@ def updateQaChain(temp, k, modelNameDD, stdlQs, api_key_st, vsDict_st):
     # settingsUpdated = 'Settings updated:'+ ' Model=' + modelName + ', Temp=' + str(temp)+ ', k=' + str(k)
     # gr.Info(settingsUpdated)
     
+    if 'meta-llama/llama-2' in modelNameDD:
+        prompt = promptLlama
+    else:
+        prompt = None
+
     # Now create QA Chain using the LLM
     if stdlQs==0: # 0th index i.e. first option
         qa_chain_st = RetrievalQA.from_llm(
                     llm=llm, 
                     retriever=vsDict_st['chromaClient'].as_retriever(search_type="similarity", search_kwargs={"k": int(k)}),
                     return_source_documents=True,
+                    prompt=prompt,
                     input_key = 'question', output_key='answer' # to align with ConversationalRetrievalChain for downstream functions
                 )
     else:
@@ -184,7 +190,8 @@ def updateQaChain(temp, k, modelNameDD, stdlQs, api_key_st, vsDict_st):
                     retriever=vsDict_st['chromaClient'].as_retriever(search_type="similarity", search_kwargs={"k": int(k)}),
                     rephrase_question=rephQs,
                     return_source_documents=True,
-                    return_generated_question=True
+                    return_generated_question=True,
+                    combine_docs_chain_kwargs={'prompt':promptLlama}
                 )
     
     return qa_chain_st, model_dd.update(value=modelNameDD)
@@ -234,7 +241,7 @@ with gr.Blocks(theme=gr.themes.Default(primary_hue='orange', secondary_hue='gray
                             , info='Internal IBMers only')
                     bamKey_btn = gr.Button("Submit BAM API Key")
             with gr.Row(visible=mode.uiAddDataVis):
-                upload_fb = gr.Files(scale=5, label="Upload (multiple) Files - pdf/txt/docx supported", file_types=['.doc', '.docx', 'text', '.pdf', '.csv'])
+                upload_fb = gr.Files(scale=5, label="Upload (multiple) Files - pdf/txt/docx supported", file_types=['.doc', '.docx', 'text', '.pdf', '.csv', '.ppt', '.pptx'])
                 urls_tb = gr.Textbox(scale=5, label="Enter URLs starting with https (comma separated)"\
                                     , info=url_tb_info\
                                     , placeholder=url_tb_ph)

@@ -11,3 +11,4 @@ docx2txt
 sentence-transformers
 ibm-watson-machine-learning
 ibm-generative-ai
+"unstructured[all-docs]"
