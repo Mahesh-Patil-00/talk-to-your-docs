@@ -1,6 +1,6 @@
 ---
 title: Talk To Your Docs
-emoji: 📚
+emoji: 🌍
 colorFrom: purple
 colorTo: blue
 sdk: gradio
@@ -43,5 +43,3 @@ GDRIVE_FOLDER_URL=https://drive.google.com/drive/folders/1ce1n1kleS1FOotdcu5joXe
 OPENAI_API_KEY=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
 # your OpenAI API Key taken from https://platform.openai.com/account/api-keys
 ```
-
-
